@@ -12,7 +12,12 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 
 import { APIProvider } from '@/api';
-import { hydrateAuth, loadSelectedTheme } from '@/lib';
+import {
+  hydrateHabits,
+  hydrateJournal,
+  hydrateUser,
+  loadSelectedTheme,
+} from '@/lib';
 import { useThemeConfig } from '@/lib/use-theme-config';
 
 export { ErrorBoundary } from 'expo-router';
@@ -21,8 +26,10 @@ export const unstable_settings = {
   initialRouteName: '(app)',
 };
 
-hydrateAuth();
 loadSelectedTheme();
+hydrateHabits();
+hydrateJournal();
+hydrateUser();
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
 // Set the animation options. This is optional.
@@ -37,7 +44,10 @@ export default function RootLayout() {
       <Stack>
         <Stack.Screen name="(app)" options={{ headerShown: false }} />
         <Stack.Screen name="onboarding" options={{ headerShown: false }} />
-        <Stack.Screen name="login" options={{ headerShown: false }} />
+        <Stack.Screen name="habit/[id]" options={{ headerShown: false }} />
+        <Stack.Screen name="habit/add" options={{ headerShown: false }} />
+        <Stack.Screen name="reflection/add" options={{ headerShown: false }} />
+        <Stack.Screen name="paywall" options={{ headerShown: false }} />
       </Stack>
     </Providers>
   );

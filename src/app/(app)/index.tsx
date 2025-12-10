@@ -1,35 +1,178 @@
-import { FlashList } from '@shopify/flash-list';
-import React from 'react';
+import * as React from 'react';
+import { ScrollView } from 'react-native';
 
-import type { Post } from '@/api';
-import { usePosts } from '@/api';
-import { Card } from '@/components/card';
-import { EmptyList, FocusAwareStatusBar, Text, View } from '@/components/ui';
+import { EmptyState } from '@/components/empty-state';
+import { Greeting } from '@/components/greeting';
+import { HabitCard } from '@/components/habit-card';
+import {
+  FocusAwareStatusBar,
+  Image,
+  SafeAreaView,
+  Text,
+  View,
+} from '@/components/ui';
+import { WeekStrip } from '@/components/week-strip';
+import { useHabitStore } from '@/lib/stores';
+import type { Habit, TimeOfDay } from '@/types';
 
-export default function Feed() {
-  const { data, isPending, isError } = usePosts();
-  const renderItem = React.useCallback(
-    ({ item }: { item: Post }) => <Card {...item} />,
-    []
+const TIME_OF_DAY_CONFIG: Record<TimeOfDay, { label: string; emoji: string }> =
+  {
+    morning: { label: 'Morning', emoji: '☀️' },
+    afternoon: { label: 'Afternoon', emoji: '🌤️' },
+    evening: { label: 'Evening', emoji: '🌙' },
+  };
+
+function getToday(): string {
+  return new Date().toISOString().split('T')[0];
+}
+
+function formatDateLabel(dateStr: string): string {
+  const today = getToday();
+  if (dateStr === today) return 'Today';
+
+  const date = new Date(dateStr + 'T12:00:00');
+  const todayDate = new Date(today + 'T12:00:00');
+  const diff = Math.round(
+    (todayDate.getTime() - date.getTime()) / (1000 * 60 * 60 * 24)
   );
 
-  if (isError) {
-    return (
-      <View>
-        <Text> Error Loading data </Text>
-      </View>
-    );
-  }
+  if (diff === 1) return 'Yesterday';
+  if (diff === -1) return 'Tomorrow';
+
+  return date.toLocaleDateString('en-US', {
+    weekday: 'long',
+    month: 'short',
+    day: 'numeric',
+  });
+}
+
+type TimeGroupProps = {
+  timeOfDay: TimeOfDay;
+  habits: Habit[];
+  selectedDate: string;
+  getCompletionForDate: (habitId: string, date: string) => unknown;
+};
+
+function TimeGroup({
+  timeOfDay,
+  habits,
+  selectedDate,
+  getCompletionForDate,
+}: TimeGroupProps): React.ReactElement {
+  const config = TIME_OF_DAY_CONFIG[timeOfDay];
   return (
-    <View className="flex-1 ">
-      <FocusAwareStatusBar />
-      <FlashList
-        data={data}
-        renderItem={renderItem}
-        keyExtractor={(_, index) => `item-${index}`}
-        ListEmptyComponent={<EmptyList isLoading={isPending} />}
-        estimatedItemSize={300}
-      />
+    <View className="mb-6">
+      <View className="mb-3 flex-row items-center">
+        <Text className="mr-2 text-lg">{config.emoji}</Text>
+        <Text className="text-sm font-semibold uppercase tracking-wide text-neutral-500">
+          {config.label}
+        </Text>
+      </View>
+      {habits.map((habit) => (
+        <HabitCard
+          key={habit.id}
+          habit={habit}
+          date={selectedDate}
+          completion={getCompletionForDate(habit.id, selectedDate) as never}
+        />
+      ))}
     </View>
+  );
+}
+
+export default function Today(): React.ReactElement {
+  const habits = useHabitStore.use.habits();
+  const getHabitsByTimeOfDay = useHabitStore.use.getHabitsByTimeOfDay();
+  const getCompletionForDate = useHabitStore.use.getCompletionForDate();
+
+  const [selectedDate, setSelectedDate] = React.useState<string>(getToday());
+
+  const isToday = selectedDate === getToday();
+  const hasHabits = habits.length > 0;
+  const dateLabel = formatDateLabel(selectedDate);
+
+  const habitsByTime = React.useMemo(() => {
+    const timeOfDays: TimeOfDay[] = ['morning', 'afternoon', 'evening'];
+    return timeOfDays
+      .map((time) => ({ timeOfDay: time, habits: getHabitsByTimeOfDay(time) }))
+      .filter((group) => group.habits.length > 0);
+  }, [getHabitsByTimeOfDay]);
+
+  return (
+    <SafeAreaView className="flex-1 bg-neutral-50">
+      <FocusAwareStatusBar />
+      <Header dateLabel={dateLabel} />
+      {hasHabits ? (
+        <HabitsList
+          selectedDate={selectedDate}
+          setSelectedDate={setSelectedDate}
+          isToday={isToday}
+          dateLabel={dateLabel}
+          habitsByTime={habitsByTime}
+          getCompletionForDate={getCompletionForDate}
+        />
+      ) : (
+        <EmptyState type="habits" />
+      )}
+    </SafeAreaView>
+  );
+}
+
+function Header({ dateLabel }: { dateLabel: string }): React.ReactElement {
+  return (
+    <View className="flex-row items-center justify-between px-4 py-2">
+      <View className="flex-row items-center">
+        <Image
+          source={require('../../../assets/images/logo.png')}
+          style={{ width: 50, height: 50 }}
+          contentFit="contain"
+          className="mr-2"
+        />
+        <Text className="text-xl font-bold text-neutral-800">{dateLabel}</Text>
+      </View>
+    </View>
+  );
+}
+
+type HabitsListProps = {
+  selectedDate: string;
+  setSelectedDate: (date: string) => void;
+  isToday: boolean;
+  dateLabel: string;
+  habitsByTime: { timeOfDay: TimeOfDay; habits: Habit[] }[];
+  getCompletionForDate: (habitId: string, date: string) => unknown;
+};
+
+function HabitsList({
+  selectedDate,
+  setSelectedDate,
+  isToday,
+  dateLabel,
+  habitsByTime,
+  getCompletionForDate,
+}: HabitsListProps): React.ReactElement {
+  return (
+    <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+      <WeekStrip selectedDate={selectedDate} onSelectDate={setSelectedDate} />
+      {isToday && <Greeting />}
+      {!isToday && (
+        <View className="mx-4 mt-4 rounded-xl bg-neutral-100 p-3">
+          <Text className="text-center text-sm text-neutral-600">
+            Viewing {dateLabel.toLowerCase()} • Tap habits to edit
+          </Text>
+        </View>
+      )}
+      <View className="px-4 pb-8 pt-4">
+        {habitsByTime.map(({ timeOfDay, habits }) => (
+          <TimeGroup
+            key={timeOfDay}
+            timeOfDay={timeOfDay}
+            habits={habits}
+            selectedDate={selectedDate}
+            getCompletionForDate={getCompletionForDate}
+          />
+        ))}
+      </View>
+    </ScrollView>
   );
 }
