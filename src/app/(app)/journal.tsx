@@ -34,11 +34,13 @@ function formatDate(dateStr: string): string {
 export default function Journal(): React.ReactElement {
   const router = useRouter();
   const entries = useJournalStore.use.entries();
-  const getRecentEntries = useJournalStore.use.getRecentEntries();
 
+  // Derive recent entries from the actual entries state
   const recentEntries = React.useMemo(() => {
-    return getRecentEntries(20);
-  }, [getRecentEntries]);
+    return [...entries]
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+      .slice(0, 20);
+  }, [entries]);
 
   const hasEntries = entries.length > 0;
 

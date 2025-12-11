@@ -93,13 +93,13 @@ function useHabitHistory(habitId: string | undefined, selectedDate: string) {
 
 function useHabitDetailData(params: { id: string; date?: string }) {
   const habits = useHabitStore.use.habits();
-  const getCompletionForDate = useHabitStore.use.getCompletionForDate();
+  const completions = useHabitStore.use.completions();
 
   const habit = habits.find((h) => h.id === params.id);
   const selectedDate = params.date ?? getToday();
   const isToday = selectedDate === getToday();
   const completion = habit
-    ? getCompletionForDate(habit.id, selectedDate)
+    ? completions.find((c) => c.habitId === habit.id && c.date === selectedDate)
     : undefined;
   const last7Days = useHabitHistory(habit?.id, selectedDate);
 

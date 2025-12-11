@@ -13,7 +13,7 @@ import {
 } from '@/components/ui';
 import { WeekStrip } from '@/components/week-strip';
 import { useHabitStore } from '@/lib/stores';
-import type { Habit, TimeOfDay } from '@/types';
+import type { Habit, HabitCompletion, TimeOfDay } from '@/types';
 
 const TIME_OF_DAY_CONFIG: Record<TimeOfDay, { label: string; emoji: string }> =
   {
@@ -50,14 +50,14 @@ type TimeGroupProps = {
   timeOfDay: TimeOfDay;
   habits: Habit[];
   selectedDate: string;
-  getCompletionForDate: (habitId: string, date: string) => unknown;
+  completions: HabitCompletion[];
 };
 
 function TimeGroup({
   timeOfDay,
   habits,
   selectedDate,
-  getCompletionForDate,
+  completions,
 }: TimeGroupProps): React.ReactElement {
   const config = TIME_OF_DAY_CONFIG[timeOfDay];
   return (
@@ -68,22 +68,26 @@ function TimeGroup({
           {config.label}
         </Text>
       </View>
-      {habits.map((habit) => (
-        <HabitCard
-          key={habit.id}
-          habit={habit}
-          date={selectedDate}
-          completion={getCompletionForDate(habit.id, selectedDate) as never}
-        />
-      ))}
+      {habits.map((habit) => {
+        const completion = completions.find(
+          (c) => c.habitId === habit.id && c.date === selectedDate
+        );
+        return (
+          <HabitCard
+            key={habit.id}
+            habit={habit}
+            date={selectedDate}
+            completion={completion}
+          />
+        );
+      })}
     </View>
   );
 }
 
 export default function Today(): React.ReactElement {
   const habits = useHabitStore.use.habits();
-  const getHabitsByTimeOfDay = useHabitStore.use.getHabitsByTimeOfDay();
-  const getCompletionForDate = useHabitStore.use.getCompletionForDate();
+  const completions = useHabitStore.use.completions();
 
   const [selectedDate, setSelectedDate] = React.useState<string>(getToday());
 
@@ -94,9 +98,12 @@ export default function Today(): React.ReactElement {
   const habitsByTime = React.useMemo(() => {
     const timeOfDays: TimeOfDay[] = ['morning', 'afternoon', 'evening'];
     return timeOfDays
-      .map((time) => ({ timeOfDay: time, habits: getHabitsByTimeOfDay(time) }))
+      .map((time) => ({
+        timeOfDay: time,
+        habits: habits.filter((h) => h.timeOfDay === time),
+      }))
       .filter((group) => group.habits.length > 0);
-  }, [getHabitsByTimeOfDay]);
+  }, [habits]);
 
   return (
     <SafeAreaView className="flex-1 bg-neutral-50">
@@ -109,7 +116,7 @@ export default function Today(): React.ReactElement {
           isToday={isToday}
           dateLabel={dateLabel}
           habitsByTime={habitsByTime}
-          getCompletionForDate={getCompletionForDate}
+          completions={completions}
         />
       ) : (
         <EmptyState type="habits" />
@@ -140,7 +147,7 @@ type HabitsListProps = {
   isToday: boolean;
   dateLabel: string;
   habitsByTime: { timeOfDay: TimeOfDay; habits: Habit[] }[];
-  getCompletionForDate: (habitId: string, date: string) => unknown;
+  completions: HabitCompletion[];
 };
 
 function HabitsList({
@@ -149,7 +156,7 @@ function HabitsList({
   isToday,
   dateLabel,
   habitsByTime,
-  getCompletionForDate,
+  completions,
 }: HabitsListProps): React.ReactElement {
   return (
     <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
@@ -169,7 +176,7 @@ function HabitsList({
             timeOfDay={timeOfDay}
             habits={habits}
             selectedDate={selectedDate}
-            getCompletionForDate={getCompletionForDate}
+            completions={completions}
           />
         ))}
       </View>
