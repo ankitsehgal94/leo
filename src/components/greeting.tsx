@@ -57,7 +57,7 @@ export function Greeting(): React.ReactElement {
   const displayName = userName || 'friend';
 
   return (
-    <View className="p-4">
+    <View className="px-4 py-3">
       <Text className="text-2xl font-bold text-neutral-800">
         {greeting}, {displayName}! 👋
       </Text>

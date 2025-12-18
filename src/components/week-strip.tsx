@@ -1,5 +1,10 @@
 import * as React from 'react';
 import { Pressable } from 'react-native';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+} from 'react-native-reanimated';
 
 import { cn } from '@/lib';
 import { useHabitStore } from '@/lib/stores';
@@ -17,7 +22,7 @@ type DayInfo = {
 function getWeekDays(): DayInfo[] {
   const today = new Date();
   const days: DayInfo[] = [];
-  const dayNames = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+  const dayNames = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
   const startOfWeek = new Date(today);
   startOfWeek.setDate(today.getDate() - today.getDay());
 
@@ -36,6 +41,25 @@ function getWeekDays(): DayInfo[] {
   return days;
 }
 
+type DayStatusDotProps = {
+  isToday: boolean;
+  isCompleted: boolean;
+};
+
+function DayStatusDot({
+  isToday,
+  isCompleted,
+}: DayStatusDotProps): React.ReactElement {
+  return (
+    <View className="mt-1 h-1.5">
+      {isCompleted && <View className="size-1.5 rounded-full bg-success-500" />}
+      {isToday && !isCompleted && (
+        <View className="size-1.5 rounded-full bg-primary-500" />
+      )}
+    </View>
+  );
+}
+
 type DayButtonProps = {
   day: DayInfo;
   isSelected: boolean;
@@ -47,46 +71,58 @@ function DayButton({
   isSelected,
   onPress,
 }: DayButtonProps): React.ReactElement {
-  const isSelectedNotToday = isSelected && !day.isToday;
+  const scale = useSharedValue(1);
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
+  const handlePressIn = (): void => {
+    scale.value = withSpring(0.9, { damping: 15, stiffness: 400 });
+  };
+
+  const handlePressOut = (): void => {
+    scale.value = withSpring(1, { damping: 15, stiffness: 400 });
+  };
 
   return (
-    <Pressable onPress={onPress} className="flex-1 items-center">
+    <Pressable
+      onPress={onPress}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
+      className="flex-1 items-center"
+    >
       <Text
         className={cn(
-          'text-xs font-medium',
-          day.isToday ? 'text-primary-500' : 'text-neutral-400',
-          isSelectedNotToday && 'text-primary-600'
+          'text-[10px] font-medium tracking-wide',
+          isSelected ? 'text-primary-500' : 'text-neutral-400'
         )}
       >
         {day.dayName}
       </Text>
-      <View
-        className={cn(
-          'mt-2 size-10 items-center justify-center rounded-full',
-          day.isToday && 'bg-primary-500',
-          isSelectedNotToday && 'border-2 border-primary-500',
-          !day.isToday && !isSelected && day.isCompleted && 'bg-success-100'
-        )}
-      >
-        <Text
+      <Animated.View style={animatedStyle} className="mt-1 items-center">
+        <View
           className={cn(
-            'text-base font-semibold',
-            day.isToday && 'text-white',
-            !day.isToday && 'text-neutral-700',
-            isSelectedNotToday && 'text-primary-600'
+            'items-center justify-center',
+            isSelected && 'h-14 w-9 rounded-full bg-primary-500',
+            !isSelected && 'size-9'
           )}
         >
-          {day.date}
-        </Text>
-      </View>
-      <View className="mt-2 size-2 rounded-full">
-        {day.isCompleted && !day.isToday && (
-          <View className="size-2 rounded-full bg-success-500" />
+          <Text
+            className={cn(
+              'text-base font-semibold',
+              isSelected ? 'text-white' : 'text-neutral-700'
+            )}
+          >
+            {day.date}
+          </Text>
+          {isSelected && (
+            <View className="mt-1 size-1.5 rounded-full bg-white/70" />
+          )}
+        </View>
+        {!isSelected && (
+          <DayStatusDot isToday={day.isToday} isCompleted={day.isCompleted} />
         )}
-        {day.isToday && day.isCompleted && (
-          <View className="size-2 rounded-full bg-primary-300" />
-        )}
-      </View>
+      </Animated.View>
     </Pressable>
   );
 }
@@ -118,7 +154,7 @@ export function WeekStrip({
   }, [habits, completions]);
 
   return (
-    <View className="mx-4 rounded-2xl bg-white px-2 py-4">
+    <View className="mx-4 rounded-2xl px-2 py-3">
       <View className="flex-row justify-between">
         {weekDays.map((day) => (
           <DayButton

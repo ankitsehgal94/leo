@@ -8,6 +8,18 @@ module.exports = {
   theme: {
     extend: {
       fontFamily: {
+        // Headings - Nunito
+        nunito: ['Nunito_400Regular'],
+        'nunito-medium': ['Nunito_500Medium'],
+        'nunito-semibold': ['Nunito_600SemiBold'],
+        'nunito-bold': ['Nunito_700Bold'],
+        'nunito-extrabold': ['Nunito_800ExtraBold'],
+        // Body - Poppins
+        poppins: ['Poppins_400Regular'],
+        'poppins-medium': ['Poppins_500Medium'],
+        'poppins-semibold': ['Poppins_600SemiBold'],
+        'poppins-bold': ['Poppins_700Bold'],
+        // Legacy
         inter: ['Inter'],
       },
       colors: {

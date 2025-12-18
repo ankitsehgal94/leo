@@ -8,6 +8,7 @@ export type SubTask = {
 export type Habit = {
   id: string;
   name: string;
+  emoji?: string;
   timeOfDay: TimeOfDay;
   subTasks?: SubTask[];
   createdAt: string;

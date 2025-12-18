@@ -17,6 +17,7 @@ import {
   hydrateJournal,
   hydrateUser,
   loadSelectedTheme,
+  useFonts,
 } from '@/lib';
 import { useThemeConfig } from '@/lib/use-theme-config';
 
@@ -39,6 +40,19 @@ SplashScreen.setOptions({
 });
 
 export default function RootLayout() {
+  const fontsLoaded = useFonts();
+
+  // Keep splash screen visible until fonts are loaded
+  React.useEffect(() => {
+    if (fontsLoaded) {
+      // Fonts are loaded, splash screen will be hidden by the app layout
+    }
+  }, [fontsLoaded]);
+
+  if (!fontsLoaded) {
+    return null;
+  }
+
   return (
     <Providers>
       <Stack>
