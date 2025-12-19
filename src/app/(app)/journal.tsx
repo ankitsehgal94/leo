@@ -45,14 +45,14 @@ export default function Journal(): React.ReactElement {
   const hasEntries = entries.length > 0;
 
   return (
-    <SafeAreaView className="flex-1 bg-neutral-50">
+    <SafeAreaView className="flex-1 bg-neutral-50 dark:bg-charcoal-950">
       <FocusAwareStatusBar />
 
       {/* Header */}
       <View className="flex-row items-center justify-between px-4 py-2">
         <View className="flex-row items-center">
           <Text className="text-2xl">📝</Text>
-          <Text className="ml-2 text-xl font-bold text-neutral-800">
+          <Text className="ml-2 text-xl font-bold text-neutral-800 dark:text-neutral-100">
             Journal
           </Text>
         </View>
@@ -69,7 +69,7 @@ export default function Journal(): React.ReactElement {
           className="flex-1 px-4"
           showsVerticalScrollIndicator={false}
         >
-          <Text className="mb-3 mt-4 text-sm font-semibold text-neutral-500">
+          <Text className="mb-3 mt-4 text-sm font-semibold text-neutral-500 dark:text-neutral-400">
             RECENT REFLECTIONS
           </Text>
 
@@ -77,13 +77,13 @@ export default function Journal(): React.ReactElement {
             <Pressable
               key={entry.id}
               onPress={() => router.push(`/reflection/add?edit=${entry.id}`)}
-              className="mb-3 rounded-2xl bg-white p-4"
+              className="mb-3 rounded-2xl bg-white p-4 dark:bg-charcoal-850"
             >
               <Text className="text-sm font-medium text-primary-500">
                 {formatDate(entry.date)}
               </Text>
               <Text
-                className="mt-2 text-base text-neutral-700"
+                className="mt-2 text-base text-neutral-700 dark:text-neutral-300"
                 numberOfLines={3}
               >
                 {entry.text}

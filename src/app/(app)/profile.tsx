@@ -18,9 +18,11 @@ function StatCard({
   label: string;
 }): React.ReactElement {
   return (
-    <View className="flex-1 items-center rounded-xl bg-white p-4">
+    <View className="flex-1 items-center rounded-xl bg-white p-4 dark:bg-charcoal-850">
       <Text className="text-2xl font-bold text-primary-500">{value}</Text>
-      <Text className="mt-1 text-xs text-neutral-500">{label}</Text>
+      <Text className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
+        {label}
+      </Text>
     </View>
   );
 }
@@ -86,7 +88,7 @@ export default function Profile(): React.ReactElement {
   );
 
   return (
-    <SafeAreaView className="flex-1 bg-neutral-50">
+    <SafeAreaView className="flex-1 bg-neutral-50 dark:bg-charcoal-950">
       <FocusAwareStatusBar />
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
         <ProfileHeader
@@ -138,7 +140,7 @@ function ProfileHeader({
             value={editedName}
             onChangeText={setEditedName}
             placeholder="Your name"
-            className="rounded-lg bg-white px-4 py-2 text-lg text-neutral-800"
+            className="rounded-lg bg-white px-4 py-2 text-lg text-neutral-800 dark:bg-charcoal-850 dark:text-neutral-100"
             autoFocus
             onSubmitEditing={handleSaveName}
           />
@@ -148,7 +150,7 @@ function ProfileHeader({
         </View>
       ) : (
         <Pressable onPress={() => setIsEditingName(true)} className="mt-4">
-          <Text className="text-xl font-semibold text-neutral-800">
+          <Text className="text-xl font-semibold text-neutral-800 dark:text-neutral-100">
             {userName || 'Tap to set name'}
           </Text>
         </Pressable>
@@ -173,7 +175,7 @@ type StatsData = {
 function StatsSection({ stats }: { stats: StatsData }): React.ReactElement {
   return (
     <View className="mt-6 px-4">
-      <Text className="mb-3 text-sm font-semibold text-neutral-500">
+      <Text className="mb-3 text-sm font-semibold text-neutral-500 dark:text-neutral-400">
         YOUR STATS
       </Text>
       <View className="flex-row">

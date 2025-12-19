@@ -1,4 +1,5 @@
 import { BottomSheetModal, BottomSheetView } from '@gorhom/bottom-sheet';
+import { useColorScheme } from 'nativewind';
 import * as React from 'react';
 import { Pressable } from 'react-native';
 import Animated, {
@@ -14,6 +15,7 @@ import { useHabitStore } from '@/lib/stores';
 import type { Habit, HabitCompletion, SubTask } from '@/types';
 
 import { Text, View } from './ui';
+import colors from './ui/colors';
 import { renderBackdrop } from './ui/modal';
 
 type Props = {
@@ -29,6 +31,8 @@ export function HabitStepsSheet({
   date,
   bottomSheetRef,
 }: Props): React.ReactElement {
+  const { colorScheme } = useColorScheme();
+  const isDark = colorScheme === 'dark';
   const toggleSubTaskComplete = useHabitStore.use.toggleSubTaskComplete();
   const completedSubTasks = completion?.completedSubTasks ?? [];
   const subTasks = habit.subTasks ?? [];
@@ -44,8 +48,13 @@ export function HabitStepsSheet({
       enableDynamicSizing
       enablePanDownToClose
       backdropComponent={renderBackdrop}
-      handleIndicatorStyle={{ backgroundColor: '#D1D5DB', width: 40 }}
-      backgroundStyle={{ backgroundColor: '#FAFAFA' }}
+      handleIndicatorStyle={{
+        backgroundColor: isDark ? colors.charcoal[600] : '#D1D5DB',
+        width: 40,
+      }}
+      backgroundStyle={{
+        backgroundColor: isDark ? colors.charcoal[900] : '#FAFAFA',
+      }}
     >
       <BottomSheetView className="pb-8">
         <SheetHeader
@@ -78,9 +87,9 @@ function SheetHeader({
   isComplete,
 }: SheetHeaderProps): React.ReactElement {
   return (
-    <View className="border-b border-neutral-100 px-5 pb-4 pt-2">
+    <View className="border-b border-neutral-100 px-5 pb-4 pt-2 dark:border-charcoal-700">
       <View className="flex-row items-center justify-between">
-        <Text className="font-nunito-bold text-xl text-neutral-800">
+        <Text className="font-nunito-bold text-xl text-neutral-800 dark:text-neutral-100">
           {habit.name}
         </Text>
         {isComplete && (
@@ -92,13 +101,13 @@ function SheetHeader({
         )}
       </View>
       <View className="mt-2 flex-row items-center">
-        <View className="mr-3 h-1.5 flex-1 overflow-hidden rounded-full bg-neutral-200">
+        <View className="mr-3 h-1.5 flex-1 overflow-hidden rounded-full bg-neutral-200 dark:bg-charcoal-700">
           <View
             className="h-full rounded-full bg-primary-500"
             style={{ width: `${(completedCount / totalCount) * 100}%` }}
           />
         </View>
-        <Text className="font-poppins-medium text-sm text-neutral-500">
+        <Text className="font-poppins-medium text-sm text-neutral-500 dark:text-neutral-400">
           {completedCount}/{totalCount}
         </Text>
       </View>
@@ -167,17 +176,19 @@ function StepItem({
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
       style={animatedStyle}
-      className="mb-3 flex-row items-center rounded-2xl bg-white p-4"
+      className="mb-3 flex-row items-center rounded-2xl bg-white p-4 dark:bg-charcoal-850"
     >
-      <View className="mr-3 size-8 items-center justify-center rounded-full bg-neutral-100">
-        <Text className="font-poppins-medium text-sm text-neutral-400">
+      <View className="mr-3 size-8 items-center justify-center rounded-full bg-neutral-100 dark:bg-charcoal-700">
+        <Text className="font-poppins-medium text-sm text-neutral-400 dark:text-neutral-500">
           {index + 1}
         </Text>
       </View>
       <Text
         className={cn(
           'flex-1 font-poppins text-base',
-          isCompleted ? 'text-neutral-400 line-through' : 'text-neutral-800'
+          isCompleted
+            ? 'text-neutral-400 line-through dark:text-neutral-500'
+            : 'text-neutral-800 dark:text-neutral-100'
         )}
       >
         {subTask.title}
@@ -213,7 +224,9 @@ function StepCheckbox({
       <View
         className={cn(
           'absolute size-6 rounded-full border-2',
-          isCompleted ? 'border-success-500' : 'border-neutral-200'
+          isCompleted
+            ? 'border-success-500'
+            : 'border-neutral-200 dark:border-charcoal-600'
         )}
       />
       <Animated.View

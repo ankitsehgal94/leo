@@ -1,8 +1,10 @@
 import { Redirect, SplashScreen, Tabs } from 'expo-router';
+import { useColorScheme } from 'nativewind';
 import React, { useCallback, useEffect } from 'react';
 
 import { FloatingAddButton } from '@/components/floating-add-button';
 import { View } from '@/components/ui';
+import colors from '@/components/ui/colors';
 import {
   Discover as DiscoverIcon,
   Home as HomeIcon,
@@ -11,14 +13,16 @@ import {
 } from '@/components/ui/icons';
 import { useIsFirstTime } from '@/lib';
 
-const TAB_BAR_STYLE = {
-  backgroundColor: '#FFFFFF',
-  borderTopWidth: 0,
-  paddingTop: 8,
-  height: 88,
-  elevation: 0,
-  shadowOpacity: 0,
-};
+function getTabBarStyle(isDark: boolean) {
+  return {
+    backgroundColor: isDark ? colors.charcoal[950] : '#FFFFFF',
+    borderTopWidth: 0,
+    paddingTop: 8,
+    height: 88,
+    elevation: 0,
+    shadowOpacity: 0,
+  };
+}
 
 const TAB_BAR_LABEL_STYLE = {
   fontSize: 11,
@@ -38,13 +42,16 @@ function useSplashScreen() {
 }
 
 function TabScreens(): React.ReactElement {
+  const { colorScheme } = useColorScheme();
+  const isDark = colorScheme === 'dark';
+
   return (
     <View className="flex-1">
       <Tabs
         screenOptions={{
-          tabBarStyle: TAB_BAR_STYLE,
-          tabBarActiveTintColor: '#FF7B1A',
-          tabBarInactiveTintColor: '#9CA3AF',
+          tabBarStyle: getTabBarStyle(isDark),
+          tabBarActiveTintColor: colors.primary[500],
+          tabBarInactiveTintColor: isDark ? colors.charcoal[500] : '#9CA3AF',
           tabBarLabelStyle: TAB_BAR_LABEL_STYLE,
         }}
       >

@@ -1,3 +1,4 @@
+import { Image as ExpoImage } from 'expo-image';
 import * as React from 'react';
 import type { ViewStyle } from 'react-native';
 import Animated, {
@@ -20,7 +21,11 @@ import {
   getMoodMessage,
   getMoodSubtitle,
 } from './cat-mood';
-import { Image, Text, View } from './ui';
+import { Text, View } from './ui';
+
+// Preload the happy cat GIF for instant display
+const HAPPY_CAT_SOURCE = require('@assets/images/happy_cat.gif');
+ExpoImage.prefetch(HAPPY_CAT_SOURCE);
 
 type Props = {
   completedCount: number;
@@ -94,7 +99,7 @@ function AnimatedCounter({
   );
 
   return (
-    <Text className="font-poppins-bold text-3xl text-neutral-800">
+    <Text className="font-poppins-bold text-3xl text-neutral-800 dark:text-neutral-100">
       {displayValue}
     </Text>
   );
@@ -120,20 +125,28 @@ function InsightHeader({
       </Text>
       <View className="mt-3 flex-row items-center justify-between">
         <View className="flex-1 pr-4">
-          <Text className="font-nunito-extrabold text-xl text-neutral-800">
+          <Text className="font-nunito-extrabold text-xl text-neutral-800 dark:text-neutral-100">
             {message}
           </Text>
-          <Text className="mt-1 text-sm text-neutral-500">{subtitle}</Text>
+          <Text className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
+            {subtitle}
+          </Text>
         </View>
-        {isComplete ? (
-          <Image
-            source={require('@assets/images/happy_cat.gif')}
-            style={{ width: 80, height: 80, backgroundColor: 'transparent' }}
+        <View style={{ width: 80, height: 80 }}>
+          {/* Always render both, toggle visibility for instant switching */}
+          <ExpoImage
+            source={HAPPY_CAT_SOURCE}
+            style={{
+              width: 80,
+              height: 80,
+              position: 'absolute',
+              opacity: isComplete ? 1 : 0,
+            }}
             contentFit="contain"
+            cachePolicy="memory-disk"
           />
-        ) : (
-          <CatMood progress={progress} size={80} />
-        )}
+          {!isComplete && <CatMood progress={progress} size={80} />}
+        </View>
       </View>
     </>
   );
@@ -157,15 +170,15 @@ function ProgressSection({
       <View className="flex-row items-end justify-between">
         <View className="flex-row items-baseline">
           <AnimatedCounter animatedValue={animatedPercentage} />
-          <Text className="ml-0.5 font-poppins-bold text-lg text-neutral-400">
+          <Text className="ml-0.5 font-poppins-bold text-lg text-neutral-400 dark:text-neutral-500">
             %
           </Text>
         </View>
-        <Text className="font-poppins text-sm text-neutral-500">
+        <Text className="font-poppins text-sm text-neutral-500 dark:text-neutral-400">
           {completedCount} of {totalCount} completed
         </Text>
       </View>
-      <View className="mt-2 h-2 overflow-hidden rounded-full bg-neutral-100">
+      <View className="mt-2 h-2 overflow-hidden rounded-full bg-neutral-100 dark:bg-charcoal-700">
         <Animated.View
           style={progressAnimatedStyle}
           className="h-full rounded-full bg-primary-500"
@@ -192,7 +205,7 @@ export function DailyInsight({
   return (
     <Animated.View
       style={cardAnimatedStyle}
-      className="mx-4 mt-4 rounded-2xl bg-white p-4"
+      className="mx-4 mt-4 rounded-2xl bg-white p-4 dark:bg-charcoal-850"
     >
       <InsightHeader
         message={message}

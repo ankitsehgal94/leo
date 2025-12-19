@@ -68,7 +68,7 @@ export default function Today(): React.ReactElement {
   }, [habits]);
 
   return (
-    <SafeAreaView className="flex-1 bg-neutral-100">
+    <SafeAreaView className="flex-1 bg-neutral-100 dark:bg-charcoal-950">
       <FocusAwareStatusBar />
       {hasHabits ? (
         <HabitsList
@@ -100,10 +100,10 @@ function Header({ selectedDate, userName }: HeaderProps): React.ReactElement {
 
   return (
     <View className="px-4 py-2">
-      <Text className="font-poppins-medium text-xs tracking-wide text-neutral-500">
+      <Text className="font-poppins-medium text-xs tracking-wide text-neutral-500 dark:text-neutral-400">
         {dateLabel}
       </Text>
-      <Text className="mt-1 font-nunito-extrabold text-2xl text-neutral-800">
+      <Text className="mt-1 font-nunito-extrabold text-2xl text-neutral-800 dark:text-neutral-100">
         Hello, {displayName}
       </Text>
     </View>
@@ -145,10 +145,10 @@ function HabitsList({
       {/* Habits Section */}
       <View className="mt-4 px-4">
         <View className="flex-row items-center justify-between">
-          <Text className="text-lg font-bold text-neutral-800">
+          <Text className="text-lg font-bold text-neutral-800 dark:text-neutral-100">
             Your Habits
           </Text>
-          <Text className="text-sm text-neutral-500">
+          <Text className="text-sm text-neutral-500 dark:text-neutral-400">
             {completionStats.remainingCount} Remaining
           </Text>
         </View>
@@ -190,10 +190,10 @@ function TimeGroup({
       {/* Section header with line */}
       <View className="mb-3 flex-row items-center">
         <Text className="mr-2">{config.emoji}</Text>
-        <Text className="text-xs font-semibold tracking-wide text-neutral-400">
+        <Text className="text-xs font-semibold tracking-wide text-neutral-400 dark:text-neutral-500">
           {config.label}
         </Text>
-        <View className="ml-2 h-px flex-1 bg-neutral-200" />
+        <View className="ml-2 h-px flex-1 bg-neutral-200 dark:bg-charcoal-700" />
       </View>
 
       {/* Habit cards */}

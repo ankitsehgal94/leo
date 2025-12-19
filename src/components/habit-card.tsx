@@ -136,20 +136,22 @@ function HabitCardPressable({
       onPressOut={handlePressOut}
       onLongPress={onLongPress}
       style={animatedStyle}
-      className="mb-3 flex-row items-center rounded-2xl bg-white p-4"
+      className="mb-3 flex-row items-center rounded-2xl bg-white p-4 dark:bg-charcoal-850"
     >
       <EmojiIcon emoji={emoji} isComplete={isComplete} />
       <View className="ml-3 flex-1">
         <Text
           className={cn(
             'font-poppins-semibold text-base',
-            isComplete ? 'text-neutral-400 line-through' : 'text-neutral-800'
+            isComplete
+              ? 'text-neutral-400 line-through dark:text-neutral-500'
+              : 'text-neutral-800 dark:text-neutral-100'
           )}
         >
           {habit.name}
         </Text>
         {hasSubTasks && (
-          <Text className="mt-0.5 text-sm text-neutral-400">
+          <Text className="mt-0.5 text-sm text-neutral-400 dark:text-neutral-500">
             {completedCount} of {totalCount} steps
           </Text>
         )}
@@ -230,7 +232,7 @@ function CheckIndicator({
       {/* Border circle (unchecked state) */}
       <Animated.View
         style={[borderAnimatedStyle, { position: 'absolute' }]}
-        className="size-7 rounded-full border-2 border-neutral-200"
+        className="size-7 rounded-full border-2 border-neutral-200 dark:border-charcoal-600"
       />
       {/* Filled circle with check (checked state) */}
       <Animated.View

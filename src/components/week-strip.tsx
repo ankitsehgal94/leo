@@ -94,7 +94,9 @@ function DayButton({
       <Text
         className={cn(
           'text-[10px] font-medium tracking-wide',
-          isSelected ? 'text-primary-500' : 'text-neutral-400'
+          isSelected
+            ? 'text-primary-500'
+            : 'text-neutral-400 dark:text-neutral-500'
         )}
       >
         {day.dayName}
@@ -110,7 +112,9 @@ function DayButton({
           <Text
             className={cn(
               'text-base font-semibold',
-              isSelected ? 'text-white' : 'text-neutral-700'
+              isSelected
+                ? 'text-white'
+                : 'text-neutral-700 dark:text-neutral-300'
             )}
           >
             {day.date}

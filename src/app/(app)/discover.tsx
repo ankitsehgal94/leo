@@ -25,20 +25,20 @@ function TemplateCard({
   onUse,
 }: TemplateCardProps): React.ReactElement {
   return (
-    <View className="mb-3 rounded-2xl bg-white p-4">
+    <View className="mb-3 rounded-2xl bg-white p-4 dark:bg-charcoal-850">
       <View className="flex-row items-start">
         <View className="mr-3 size-12 items-center justify-center rounded-xl bg-primary-50">
           <Text className="text-2xl">{template.emoji}</Text>
         </View>
         <View className="flex-1">
-          <Text className="text-lg font-semibold text-neutral-800">
+          <Text className="text-lg font-semibold text-neutral-800 dark:text-neutral-100">
             {template.name}
           </Text>
-          <Text className="mt-1 text-sm text-neutral-500">
+          <Text className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
             {template.description}
           </Text>
           {template.subTasks && (
-            <Text className="mt-1 text-xs text-neutral-400">
+            <Text className="mt-1 text-xs text-neutral-400 dark:text-neutral-500">
               {template.subTasks.length} steps
             </Text>
           )}
@@ -72,7 +72,9 @@ function CategoryFilter({
           onPress={() => onSelect(category.id)}
           className={cn(
             'mr-2 flex-row items-center rounded-full px-4 py-2',
-            selectedCategory === category.id ? 'bg-primary-500' : 'bg-white'
+            selectedCategory === category.id
+              ? 'bg-primary-500'
+              : 'bg-white dark:bg-charcoal-850'
           )}
         >
           <Text className="mr-1">{category.emoji}</Text>
@@ -81,7 +83,7 @@ function CategoryFilter({
               'text-sm font-medium',
               selectedCategory === category.id
                 ? 'text-white'
-                : 'text-neutral-600'
+                : 'text-neutral-600 dark:text-neutral-300'
             )}
           >
             {category.label}
@@ -127,7 +129,7 @@ export default function Discover(): React.ReactElement {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-neutral-50">
+    <SafeAreaView className="flex-1 bg-neutral-50 dark:bg-charcoal-950">
       <FocusAwareStatusBar />
       <DiscoverHeader />
       <CategoryFilter
@@ -148,11 +150,11 @@ function DiscoverHeader(): React.ReactElement {
     <View className="px-4 py-2">
       <View className="flex-row items-center">
         <Text className="text-2xl">🔍</Text>
-        <Text className="ml-2 text-xl font-bold text-neutral-800">
+        <Text className="ml-2 text-xl font-bold text-neutral-800 dark:text-neutral-100">
           Discover
         </Text>
       </View>
-      <Text className="mt-1 text-neutral-500">
+      <Text className="mt-1 text-neutral-500 dark:text-neutral-400">
         Browse habit templates to get started
       </Text>
     </View>
