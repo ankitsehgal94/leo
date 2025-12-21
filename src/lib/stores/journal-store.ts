@@ -1,11 +1,26 @@
 import { create } from 'zustand';
 
-import type { JournalEntry } from '@/types';
+import type { JournalEntry, MoodLevel } from '@/types';
 
 import { getItem, setItem } from '../storage';
 import { createSelectors } from '../utils';
 
 const JOURNAL_KEY = 'journal_entries';
+
+type AddEntryParams = {
+  title: string;
+  text: string;
+  mood: MoodLevel;
+  date?: string;
+  time?: string;
+};
+
+type UpdateEntryParams = {
+  id: string;
+  title?: string;
+  text?: string;
+  mood?: MoodLevel;
+};
 
 type JournalState = {
   entries: JournalEntry[];
@@ -13,8 +28,8 @@ type JournalState = {
 
   // Actions
   hydrate: () => void;
-  addEntry: (text: string, date?: string) => void;
-  updateEntry: (id: string, text: string) => void;
+  addEntry: (params: AddEntryParams) => void;
+  updateEntry: (params: UpdateEntryParams) => void;
   deleteEntry: (id: string) => void;
   getEntryForDate: (date: string) => JournalEntry | undefined;
   getRecentEntries: (limit?: number) => JournalEntry[];
@@ -28,6 +43,14 @@ const getTodayDate = (): string => {
   return new Date().toISOString().split('T')[0];
 };
 
+const getCurrentTime = (): string => {
+  return new Date().toLocaleTimeString('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true,
+  });
+};
+
 const _useJournalStore = create<JournalState>((set, get) => ({
   entries: [],
   isLoading: true,
@@ -37,22 +60,27 @@ const _useJournalStore = create<JournalState>((set, get) => ({
     set({ entries, isLoading: false });
   },
 
-  addEntry: (text, date) => {
+  addEntry: (params) => {
+    const { title, text, mood, date, time } = params;
     const entryDate = date ?? getTodayDate();
+    const entryTime = time ?? getCurrentTime();
 
     // Check if entry already exists for this date
     const existingEntry = get().entries.find((e) => e.date === entryDate);
 
     if (existingEntry) {
       // Update existing entry
-      get().updateEntry(existingEntry.id, text);
+      get().updateEntry({ id: existingEntry.id, title, text, mood });
       return;
     }
 
     const newEntry: JournalEntry = {
       id: generateId(),
       date: entryDate,
+      time: entryTime,
+      title,
       text,
+      mood,
       createdAt: new Date().toISOString(),
     };
 
@@ -61,9 +89,10 @@ const _useJournalStore = create<JournalState>((set, get) => ({
     setItem(JOURNAL_KEY, entries);
   },
 
-  updateEntry: (id, text) => {
+  updateEntry: (params) => {
+    const { id, ...updates } = params;
     const entries = get().entries.map((entry) =>
-      entry.id === id ? { ...entry, text } : entry
+      entry.id === id ? { ...entry, ...updates } : entry
     );
     set({ entries });
     setItem(JOURNAL_KEY, entries);

@@ -67,7 +67,7 @@ function TabScreens(): React.ReactElement {
         <Tabs.Screen
           name="journal"
           options={{
-            title: 'Stats',
+            title: 'Journal',
             headerShown: false,
             tabBarIcon: ({ color }) => <JournalIcon color={color} />,
             tabBarButtonTestID: 'journal-tab',
@@ -76,7 +76,7 @@ function TabScreens(): React.ReactElement {
         <Tabs.Screen
           name="discover"
           options={{
-            title: 'Social',
+            title: 'Discover',
             headerShown: false,
             tabBarIcon: ({ color }) => <DiscoverIcon color={color} />,
             tabBarButtonTestID: 'discover-tab',

@@ -1,3 +1,4 @@
+export * from './arrow-left';
 export * from './arrow-right';
 export * from './caret-down';
 export * from './discover';
