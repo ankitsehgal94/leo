@@ -19,6 +19,7 @@ const TIME_HOURS: Record<TimeOfDay, number> = {
   morning: 8,
   afternoon: 13,
   evening: 21,
+  anytime: 12, // Default to noon for anytime habits
 };
 
 const NOTIFICATION_MESSAGES: Record<TimeOfDay, string[]> = {
@@ -36,6 +37,11 @@ const NOTIFICATION_MESSAGES: Record<TimeOfDay, string[]> = {
     'Evening routine time! Wind down with your habits 🌙',
     'Your evening habits are waiting for you ✨',
     'End your day strong with your evening routine 🐱',
+  ],
+  anytime: [
+    "Don't forget your habits! You've got this 💪",
+    'Time to check in on your habits! 🐱',
+    'Your habits are waiting for you ✨',
   ],
 };
 

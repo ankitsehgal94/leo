@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-import type { Habit, HabitCompletion, SubTask, TimeOfDay } from '@/types';
+import type { Habit, HabitCompletion, TimeOfDay } from '@/types';
 
 import { getItem, setItem } from '../storage';
 import { createSelectors } from '../utils';
@@ -20,13 +20,9 @@ type HabitState = {
   ) => void;
   deleteHabit: (id: string) => void;
   toggleHabitComplete: (habitId: string, date: string) => void;
-  toggleSubTaskComplete: (
-    habitId: string,
-    subTaskId: string,
-    date: string
-  ) => void;
-  addSubTask: (habitId: string, title: string) => void;
-  removeSubTask: (habitId: string, subTaskId: string) => void;
+  updateProgress: (habitId: string, date: string, progress: number) => void;
+  incrementProgress: (habitId: string, date: string) => void;
+  decrementProgress: (habitId: string, date: string) => void;
   getCompletionForDate: (
     habitId: string,
     date: string
@@ -47,21 +43,16 @@ const generateId = (): string =>
   Date.now().toString(36) + Math.random().toString(36).substr(2);
 
 // Helper: Create new completion
-function createNewCompletion(
-  habit: Habit,
-  ctx: ToggleContext
-): HabitCompletion {
+function createNewCompletion(ctx: ToggleContext): HabitCompletion {
   return {
     date: ctx.date,
     habitId: ctx.habitId,
-    completedSubTasks: habit.subTasks?.map((s) => s.id) ?? [],
     isComplete: true,
   };
 }
 
 // Helper: Toggle existing completion
 function toggleExistingCompletion(
-  habit: Habit,
   existing: HabitCompletion,
   completions: HabitCompletion[]
 ): HabitCompletion[] {
@@ -72,51 +63,38 @@ function toggleExistingCompletion(
     );
   }
   return completions.map((c) =>
-    c.habitId === habitId && c.date === date
-      ? {
-          ...c,
-          isComplete: true,
-          completedSubTasks: habit.subTasks?.map((s) => s.id) ?? [],
-        }
-      : c
+    c.habitId === habitId && c.date === date ? { ...c, isComplete: true } : c
   );
 }
 
-// Helper: Handle sub-task toggle
-type SubTaskToggleContext = ToggleContext & { subTaskId: string };
-
-function handleSubTaskToggle(
+// Helper: Handle progress update for tracked habits
+function handleProgressUpdate(
   habit: Habit,
   completions: HabitCompletion[],
-  ctx: SubTaskToggleContext
+  ctx: ToggleContext & { progress: number }
 ): HabitCompletion[] {
-  const { habitId, subTaskId, date } = ctx;
+  const { habitId, date, progress } = ctx;
+  const goal = habit.tracking?.goal ?? 1;
+  const isComplete = progress >= goal;
+
   const existing = completions.find(
     (c) => c.habitId === habitId && c.date === date
   );
 
   if (!existing) {
-    return [
-      ...completions,
-      { date, habitId, completedSubTasks: [subTaskId], isComplete: false },
-    ];
+    if (progress <= 0) return completions;
+    return [...completions, { date, habitId, isComplete, progress }];
   }
 
-  const hasSubTask = existing.completedSubTasks.includes(subTaskId);
-  const newCompletedSubTasks = hasSubTask
-    ? existing.completedSubTasks.filter((id) => id !== subTaskId)
-    : [...existing.completedSubTasks, subTaskId];
-
-  const allSubTasksComplete =
-    habit.subTasks?.length === newCompletedSubTasks.length;
+  if (progress <= 0) {
+    return completions.filter(
+      (c) => !(c.habitId === habitId && c.date === date)
+    );
+  }
 
   return completions.map((c) =>
     c.habitId === habitId && c.date === date
-      ? {
-          ...c,
-          completedSubTasks: newCompletedSubTasks,
-          isComplete: allSubTasksComplete,
-        }
+      ? { ...c, progress, isComplete }
       : c
   );
 }
@@ -173,50 +151,66 @@ function createCompletionActions(set: StoreSet, get: StoreGet) {
         (c) => c.habitId === habitId && c.date === date
       );
       const completions = existing
-        ? toggleExistingCompletion(habit, existing, get().completions)
-        : [...get().completions, createNewCompletion(habit, ctx)];
+        ? toggleExistingCompletion(existing, get().completions)
+        : [...get().completions, createNewCompletion(ctx)];
 
-      set({ completions });
-      setItem(COMPLETIONS_KEY, completions);
-    },
-
-    toggleSubTaskComplete: (
-      habitId: string,
-      subTaskId: string,
-      date: string
-    ) => {
-      const habit = get().habits.find((h) => h.id === habitId);
-      if (!habit) return;
-
-      const ctx: SubTaskToggleContext = { habitId, subTaskId, date };
-      const completions = handleSubTaskToggle(habit, get().completions, ctx);
       set({ completions });
       setItem(COMPLETIONS_KEY, completions);
     },
   };
 }
 
-function createSubTaskActions(set: StoreSet, get: StoreGet) {
+function createProgressActions(set: StoreSet, get: StoreGet) {
   return {
-    addSubTask: (habitId: string, title: string) => {
-      const newSubTask: SubTask = { id: generateId(), title };
-      const habits = get().habits.map((h) =>
-        h.id === habitId
-          ? { ...h, subTasks: [...(h.subTasks ?? []), newSubTask] }
-          : h
-      );
-      set({ habits });
-      setItem(HABITS_KEY, habits);
+    updateProgress: (habitId: string, date: string, progress: number) => {
+      const habit = get().habits.find((h) => h.id === habitId);
+      if (!habit) return;
+
+      const completions = handleProgressUpdate(habit, get().completions, {
+        habitId,
+        date,
+        progress,
+      });
+      set({ completions });
+      setItem(COMPLETIONS_KEY, completions);
     },
 
-    removeSubTask: (habitId: string, subTaskId: string) => {
-      const habits = get().habits.map((h) =>
-        h.id === habitId
-          ? { ...h, subTasks: h.subTasks?.filter((s) => s.id !== subTaskId) }
-          : h
+    incrementProgress: (habitId: string, date: string) => {
+      const habit = get().habits.find((h) => h.id === habitId);
+      if (!habit) return;
+
+      const existing = get().completions.find(
+        (c) => c.habitId === habitId && c.date === date
       );
-      set({ habits });
-      setItem(HABITS_KEY, habits);
+      const currentProgress = existing?.progress ?? 0;
+      const newProgress = currentProgress + 1;
+
+      const completions = handleProgressUpdate(habit, get().completions, {
+        habitId,
+        date,
+        progress: newProgress,
+      });
+      set({ completions });
+      setItem(COMPLETIONS_KEY, completions);
+    },
+
+    decrementProgress: (habitId: string, date: string) => {
+      const habit = get().habits.find((h) => h.id === habitId);
+      if (!habit) return;
+
+      const existing = get().completions.find(
+        (c) => c.habitId === habitId && c.date === date
+      );
+      const currentProgress = existing?.progress ?? 0;
+      const newProgress = Math.max(0, currentProgress - 1);
+
+      const completions = handleProgressUpdate(habit, get().completions, {
+        habitId,
+        date,
+        progress: newProgress,
+      });
+      set({ completions });
+      setItem(COMPLETIONS_KEY, completions);
     },
   };
 }
@@ -248,7 +242,7 @@ const _useHabitStore = create<HabitState>((set, get) => ({
   isLoading: true,
   ...createHabitActions(set, get),
   ...createCompletionActions(set, get),
-  ...createSubTaskActions(set, get),
+  ...createProgressActions(set, get),
   ...createSelectors_(get),
 }));
 

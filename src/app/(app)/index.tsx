@@ -14,6 +14,7 @@ const TIME_OF_DAY_CONFIG: Record<TimeOfDay, { label: string; emoji: string }> =
     morning: { label: 'MORNING', emoji: '☀️' },
     afternoon: { label: 'AFTERNOON', emoji: '☀️' },
     evening: { label: 'EVENING', emoji: '🌙' },
+    anytime: { label: 'ANYTIME', emoji: '∞' },
   };
 
 function getToday(): string {
@@ -58,7 +59,12 @@ export default function Today(): React.ReactElement {
   }, [habits, completions, selectedDate]);
 
   const habitsByTime = React.useMemo(() => {
-    const timeOfDays: TimeOfDay[] = ['morning', 'afternoon', 'evening'];
+    const timeOfDays: TimeOfDay[] = [
+      'morning',
+      'afternoon',
+      'evening',
+      'anytime',
+    ];
     return timeOfDays
       .map((time) => ({
         timeOfDay: time,

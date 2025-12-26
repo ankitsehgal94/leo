@@ -1,20 +1,28 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as React from 'react';
-import { Alert, Pressable, ScrollView, TextInput } from 'react-native';
+import { Alert, Pressable, ScrollView } from 'react-native';
+import Animated, {
+  FadeInDown,
+  useAnimatedStyle,
+  useSharedValue,
+  withSequence,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
 
-import { TimeOfDayPicker } from '@/components/time-of-day-picker';
+import { DailyTargetPicker } from '@/components/daily-target-picker';
+import { FrequencyPicker } from '@/components/frequency-picker';
+import { HabitSummaryCard } from '@/components/habit-summary-card';
+import { HabitTitleInput } from '@/components/habit-title-input';
+import { ReminderPicker } from '@/components/reminder-picker';
 import { FocusAwareStatusBar, SafeAreaView, Text, View } from '@/components/ui';
-import { ArrowRight } from '@/components/ui/icons';
-import {
-  MAX_FREE_HABITS_COUNT,
-  useHabitStore,
-  useUserStore,
-} from '@/lib/stores';
-import type { SubTask, TimeOfDay } from '@/types';
+import { ArrowLeft } from '@/components/ui/icons';
+import { cn } from '@/lib';
+import { useHabitStore, useUserStore } from '@/lib/stores';
+import type { DayOfWeek, Frequency, TimeOfDay, TrackingConfig } from '@/types';
+import { ALL_DAYS, deriveTimeOfDay, suggestTracking } from '@/types';
 
-function generateId(): string {
-  return Date.now().toString(36) + Math.random().toString(36).substr(2);
-}
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 function useHabitData(editId?: string) {
   const habits = useHabitStore.use.habits();
@@ -24,36 +32,105 @@ function useHabitData(editId?: string) {
   return { habits, existingHabit, isEditing: !!existingHabit };
 }
 
+type HabitFormState = {
+  name: string;
+  setName: (name: string) => void;
+  frequency: Frequency;
+  setFrequency: (frequency: Frequency) => void;
+  selectedDays: DayOfWeek[];
+  setSelectedDays: (days: DayOfWeek[]) => void;
+  reminderEnabled: boolean;
+  setReminderEnabled: (enabled: boolean) => void;
+  reminderTime: string;
+  setReminderTime: (time: string) => void;
+  timeOfDay: TimeOfDay;
+  setTimeOfDay: (timeOfDay: TimeOfDay) => void;
+  tracking: TrackingConfig;
+  setTracking: (tracking: TrackingConfig) => void;
+};
+
+function useHabitForm(
+  existingHabit: ReturnType<typeof useHabitData>['existingHabit'],
+  isEditing: boolean
+): HabitFormState {
+  const [name, setName] = React.useState(existingHabit?.name ?? '');
+  const [frequency, setFrequency] = React.useState<Frequency>(
+    existingHabit?.frequency ?? 'daily'
+  );
+  const [selectedDays, setSelectedDays] = React.useState<DayOfWeek[]>(
+    existingHabit?.selectedDays ?? ALL_DAYS
+  );
+  const [reminderEnabled, setReminderEnabled] = React.useState(
+    existingHabit?.reminderEnabled ?? false
+  );
+  const [reminderTime, setReminderTime] = React.useState(
+    existingHabit?.reminderTime ?? '08:00'
+  );
+  const [timeOfDay, setTimeOfDay] = React.useState<TimeOfDay>(
+    existingHabit?.timeOfDay ?? 'morning'
+  );
+  const [tracking, setTracking] = React.useState<TrackingConfig>(
+    existingHabit?.tracking ?? { type: 'simple', goal: 1 }
+  );
+  const [hasAppliedSuggestion, setHasAppliedSuggestion] = React.useState(false);
+
+  React.useEffect(() => {
+    if (reminderEnabled) setTimeOfDay(deriveTimeOfDay(reminderTime));
+  }, [reminderEnabled, reminderTime]);
+
+  React.useEffect(() => {
+    if (!isEditing && name.trim().length > 2 && !hasAppliedSuggestion) {
+      const suggested = suggestTracking(name);
+      if (suggested.type !== 'simple') {
+        setTracking(suggested);
+        setHasAppliedSuggestion(true);
+      }
+    }
+  }, [name, isEditing, hasAppliedSuggestion]);
+
+  return {
+    name,
+    setName,
+    frequency,
+    setFrequency,
+    selectedDays,
+    setSelectedDays,
+    reminderEnabled,
+    setReminderEnabled,
+    reminderTime,
+    setReminderTime,
+    timeOfDay,
+    setTimeOfDay,
+    tracking,
+    setTracking,
+  };
+}
+
 export default function AddHabit(): React.ReactElement {
   const router = useRouter();
   const { edit } = useLocalSearchParams<{ edit?: string }>();
+  const { habits, existingHabit, isEditing } = useHabitData(edit);
+  const form = useHabitForm(existingHabit, isEditing);
 
   const addHabit = useHabitStore.use.addHabit();
   const updateHabit = useHabitStore.use.updateHabit();
   const canAddHabit = useUserStore.use.canAddHabit();
 
-  const { habits, existingHabit, isEditing } = useHabitData(edit);
-
-  const [name, setName] = React.useState(existingHabit?.name ?? '');
-  const [timeOfDay, setTimeOfDay] = React.useState<TimeOfDay>(
-    existingHabit?.timeOfDay ?? 'morning'
-  );
-  const [subTasks, setSubTasks] = React.useState<SubTask[]>(
-    existingHabit?.subTasks ?? []
-  );
-  const [newSubTask, setNewSubTask] = React.useState('');
-
-  const canSave = name.trim().length > 0;
+  const canSave = form.name.trim().length > 0;
 
   const handleSave = (): void => {
-    if (!name.trim()) {
+    if (!form.name.trim()) {
       Alert.alert('Error', 'Please enter a habit name');
       return;
     }
     const habitData = {
-      name: name.trim(),
-      timeOfDay,
-      subTasks: subTasks.length > 0 ? subTasks : undefined,
+      name: form.name.trim(),
+      timeOfDay: form.timeOfDay,
+      frequency: form.frequency,
+      selectedDays: form.frequency === 'custom' ? form.selectedDays : undefined,
+      reminderEnabled: form.reminderEnabled,
+      reminderTime: form.reminderEnabled ? form.reminderTime : undefined,
+      tracking: form.tracking.type !== 'simple' ? form.tracking : undefined,
     };
     if (isEditing && existingHabit) {
       updateHabit(existingHabit.id, habitData);
@@ -68,79 +145,117 @@ export default function AddHabit(): React.ReactElement {
   };
 
   return (
-    <AddHabitView
-      isEditing={isEditing}
-      canSave={canSave}
-      habitsCount={habits.length}
-      name={name}
-      setName={setName}
-      timeOfDay={timeOfDay}
-      setTimeOfDay={setTimeOfDay}
-      subTasks={subTasks}
-      setSubTasks={setSubTasks}
-      newSubTask={newSubTask}
-      setNewSubTask={setNewSubTask}
-      onBack={() => router.back()}
-      onSave={handleSave}
-    />
-  );
-}
-
-type ViewProps = {
-  isEditing: boolean;
-  canSave: boolean;
-  habitsCount: number;
-  name: string;
-  setName: (name: string) => void;
-  timeOfDay: TimeOfDay;
-  setTimeOfDay: (time: TimeOfDay) => void;
-  subTasks: SubTask[];
-  setSubTasks: React.Dispatch<React.SetStateAction<SubTask[]>>;
-  newSubTask: string;
-  setNewSubTask: (value: string) => void;
-  onBack: () => void;
-  onSave: () => void;
-};
-
-function AddHabitView({
-  isEditing,
-  canSave,
-  habitsCount,
-  name,
-  setName,
-  timeOfDay,
-  setTimeOfDay,
-  subTasks,
-  setSubTasks,
-  newSubTask,
-  setNewSubTask,
-  onBack,
-  onSave,
-}: ViewProps): React.ReactElement {
-  return (
     <SafeAreaView className="flex-1 bg-neutral-50">
       <FocusAwareStatusBar />
       <AddHabitHeader
         isEditing={isEditing}
         canSave={canSave}
-        onBack={onBack}
-        onSave={onSave}
+        onBack={() => router.back()}
+        onSave={handleSave}
       />
-      <ScrollView
-        className="flex-1 px-4 pt-6"
-        showsVerticalScrollIndicator={false}
-      >
-        <FreeTierInfo isEditing={isEditing} habitsCount={habitsCount} />
-        <HabitNameInput name={name} setName={setName} />
-        <TimeOfDaySection timeOfDay={timeOfDay} setTimeOfDay={setTimeOfDay} />
-        <SubTasksSection
-          subTasks={subTasks}
-          setSubTasks={setSubTasks}
-          newSubTask={newSubTask}
-          setNewSubTask={setNewSubTask}
-        />
-      </ScrollView>
+      <AddHabitScrollContent
+        form={form}
+        isEditing={isEditing}
+        habitsCount={habits.length}
+      />
     </SafeAreaView>
+  );
+}
+
+type AddHabitScrollContentProps = {
+  form: HabitFormState;
+  isEditing: boolean;
+  habitsCount: number;
+};
+
+function AddHabitScrollContent({
+  form,
+  isEditing: _isEditing,
+  habitsCount: _habitsCount,
+}: AddHabitScrollContentProps): React.ReactElement {
+  return (
+    <ScrollView
+      className="flex-1"
+      showsVerticalScrollIndicator={false}
+      keyboardShouldPersistTaps="handled"
+      contentContainerStyle={{ paddingBottom: 40 }}
+    >
+      {/* <FreeTierInfo isEditing={isEditing} habitsCount={habitsCount} /> */}
+
+      {/* Habit Name Input - Journal style */}
+      <HabitTitleInput
+        value={form.name}
+        onChangeText={form.setName}
+        placeholder="Name your habit..."
+      />
+
+      {/* Leo Tip Card */}
+      {/* {!isEditing && (
+        <LeoTipCard
+          message="Small steps lead to big purrs! Try starting with a quantity you can easily achieve."
+          delay={100}
+        />
+      )} */}
+
+      <HabitFormSections form={form} />
+
+      {/* Summary Card */}
+      <HabitSummaryCard
+        tracking={form.tracking}
+        frequency={form.frequency}
+        selectedDaysCount={
+          form.frequency === 'daily' ? 7 : form.selectedDays.length
+        }
+        reminderEnabled={form.reminderEnabled}
+        reminderTime={form.reminderTime}
+      />
+    </ScrollView>
+  );
+}
+
+function HabitFormSections({
+  form,
+}: {
+  form: HabitFormState;
+}): React.ReactElement {
+  return (
+    <View className="px-4">
+      {/* Daily Target */}
+      <Animated.View
+        entering={FadeInDown.delay(150).springify()}
+        className="mb-4"
+      >
+        <DailyTargetPicker value={form.tracking} onChange={form.setTracking} />
+      </Animated.View>
+
+      {/* Frequency */}
+      <Animated.View
+        entering={FadeInDown.delay(200).springify()}
+        className="mb-4"
+      >
+        <FrequencyPicker
+          frequency={form.frequency}
+          selectedDays={form.selectedDays}
+          onFrequencyChange={form.setFrequency}
+          onDaysChange={form.setSelectedDays}
+        />
+      </Animated.View>
+
+      {/* Reminder */}
+      <Animated.View
+        entering={FadeInDown.delay(250).springify()}
+        className="mb-4"
+      >
+        <ReminderPicker
+          enabled={form.reminderEnabled}
+          time={form.reminderTime}
+          timeOfDay={form.timeOfDay}
+          onEnabledChange={form.setReminderEnabled}
+          onTimeChange={form.setReminderTime}
+          onTimeOfDayChange={form.setTimeOfDay}
+        />
+      </Animated.View>
+    </View>
   );
 }
 
@@ -157,152 +272,55 @@ function AddHabitHeader({
   onBack,
   onSave,
 }: HeaderProps): React.ReactElement {
+  const saveScale = useSharedValue(1);
+
+  const saveAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: saveScale.value }],
+  }));
+
+  const handleSavePress = (): void => {
+    if (!canSave) return;
+    saveScale.value = withSequence(
+      withTiming(0.9, { duration: 50 }),
+      withSpring(1, { damping: 12, stiffness: 400 })
+    );
+    onSave();
+  };
+
   return (
-    <View className="flex-row items-center justify-between border-b border-neutral-100 px-4 py-3">
-      <Pressable onPress={onBack} className="mr-4">
-        <View className="rotate-180">
-          <ArrowRight color="#737373" />
-        </View>
+    <View className="flex-row items-center justify-between px-4 py-3">
+      {/* Back button */}
+      <Pressable
+        onPress={onBack}
+        className="size-10 items-center justify-center rounded-full bg-neutral-100"
+      >
+        <ArrowLeft color="#404040" size={20} />
       </Pressable>
-      <Text className="flex-1 text-lg font-semibold text-neutral-800">
+
+      {/* Title */}
+      <Text className="font-poppins-semibold text-lg text-neutral-800">
         {isEditing ? 'Edit Habit' : 'New Habit'}
       </Text>
-      <Pressable onPress={onSave} disabled={!canSave}>
-        <Text
-          className={`text-base font-semibold ${
-            canSave ? 'text-primary-500' : 'text-neutral-300'
-          }`}
-        >
-          Save
-        </Text>
-      </Pressable>
-    </View>
-  );
-}
 
-function FreeTierInfo({
-  isEditing,
-  habitsCount,
-}: {
-  isEditing: boolean;
-  habitsCount: number;
-}): React.ReactElement | null {
-  if (isEditing || habitsCount < MAX_FREE_HABITS_COUNT - 1) return null;
-  return (
-    <View className="mb-4 rounded-xl bg-warning-50 p-3">
-      <Text className="text-sm text-warning-700">
-        You have {habitsCount} of {MAX_FREE_HABITS_COUNT} free habits.
-        {habitsCount === MAX_FREE_HABITS_COUNT - 1 &&
-          ' This will be your last free habit.'}
-      </Text>
-    </View>
-  );
-}
-
-function HabitNameInput({
-  name,
-  setName,
-}: {
-  name: string;
-  setName: (name: string) => void;
-}): React.ReactElement {
-  return (
-    <View className="mb-6">
-      <Text className="mb-2 text-sm font-semibold text-neutral-500">
-        HABIT NAME
-      </Text>
-      <TextInput
-        value={name}
-        onChangeText={setName}
-        placeholder="e.g., Drink Water, Meditate, Read"
-        placeholderTextColor="#A3A3A3"
-        className="rounded-xl bg-white px-4 py-3 text-base text-neutral-800"
-      />
-    </View>
-  );
-}
-
-function TimeOfDaySection({
-  timeOfDay,
-  setTimeOfDay,
-}: {
-  timeOfDay: TimeOfDay;
-  setTimeOfDay: (time: TimeOfDay) => void;
-}): React.ReactElement {
-  return (
-    <View className="mb-6">
-      <Text className="mb-2 text-sm font-semibold text-neutral-500">
-        TIME OF DAY
-      </Text>
-      <TimeOfDayPicker value={timeOfDay} onChange={setTimeOfDay} />
-    </View>
-  );
-}
-
-type SubTasksSectionProps = {
-  subTasks: SubTask[];
-  setSubTasks: React.Dispatch<React.SetStateAction<SubTask[]>>;
-  newSubTask: string;
-  setNewSubTask: (value: string) => void;
-};
-
-function SubTasksSection({
-  subTasks,
-  setSubTasks,
-  newSubTask,
-  setNewSubTask,
-}: SubTasksSectionProps): React.ReactElement {
-  const handleAddSubTask = (): void => {
-    if (newSubTask.trim()) {
-      setSubTasks([
-        ...subTasks,
-        { id: generateId(), title: newSubTask.trim() },
-      ]);
-      setNewSubTask('');
-    }
-  };
-
-  const handleRemoveSubTask = (id: string): void => {
-    setSubTasks(subTasks.filter((s) => s.id !== id));
-  };
-
-  return (
-    <View className="mb-6">
-      <Text className="mb-2 text-sm font-semibold text-neutral-500">
-        STEPS (OPTIONAL)
-      </Text>
-      <Text className="mb-3 text-xs text-neutral-400">
-        Break your habit into smaller steps to track progress
-      </Text>
-      {subTasks.map((subTask) => (
-        <View
-          key={subTask.id}
-          className="mb-2 flex-row items-center rounded-xl bg-white px-4 py-3"
-        >
-          <Text className="flex-1 text-base text-neutral-800">
-            {subTask.title}
-          </Text>
-          <Pressable onPress={() => handleRemoveSubTask(subTask.id)}>
-            <Text className="text-danger-500">Remove</Text>
-          </Pressable>
-        </View>
-      ))}
-      <View className="flex-row items-center rounded-xl bg-white">
-        <TextInput
-          value={newSubTask}
-          onChangeText={setNewSubTask}
-          placeholder="Add a step..."
-          placeholderTextColor="#A3A3A3"
-          className="flex-1 px-4 py-3 text-base text-neutral-800"
-          onSubmitEditing={handleAddSubTask}
-          returnKeyType="done"
-        />
-        {newSubTask.trim() && (
-          <Pressable onPress={handleAddSubTask} className="px-4">
-            <Text className="font-semibold text-primary-500">Add</Text>
-          </Pressable>
+      {/* Create/Save button */}
+      <AnimatedPressable
+        onPress={handleSavePress}
+        disabled={!canSave}
+        style={saveAnimatedStyle}
+        className={cn(
+          'rounded-full px-5 py-2',
+          canSave ? 'bg-primary-500' : 'bg-neutral-200'
         )}
-      </View>
+      >
+        <Text
+          className={cn(
+            'font-poppins-semibold text-sm',
+            canSave ? 'text-white' : 'text-neutral-400'
+          )}
+        >
+          {isEditing ? 'Save' : 'Create'}
+        </Text>
+      </AnimatedPressable>
     </View>
   );
 }

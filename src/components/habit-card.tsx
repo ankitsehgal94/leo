@@ -1,4 +1,3 @@
-import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { useRouter } from 'expo-router';
 import * as React from 'react';
 import { Pressable } from 'react-native';
@@ -14,7 +13,6 @@ import { cn } from '@/lib';
 import { useHabitStore } from '@/lib/stores';
 import type { Habit, HabitCompletion } from '@/types';
 
-import { HabitStepsSheet } from './habit-steps-sheet';
 import { Text, View } from './ui';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
@@ -57,40 +55,32 @@ export function HabitCard({
 }: Props): React.ReactElement {
   const router = useRouter();
   const toggleHabitComplete = useHabitStore.use.toggleHabitComplete();
-  const bottomSheetRef = React.useRef<BottomSheetModal>(null);
+  const incrementProgress = useHabitStore.use.incrementProgress();
 
-  const hasSubTasks = Boolean(habit.subTasks && habit.subTasks.length > 0);
+  const hasTracking = Boolean(
+    habit.tracking && habit.tracking.type !== 'simple'
+  );
   const isComplete = completion?.isComplete ?? false;
   const emoji = habit.emoji || getDefaultEmoji(habit.name);
 
   const handlePress = (): void => {
-    if (hasSubTasks) {
-      bottomSheetRef.current?.present();
+    if (hasTracking) {
+      incrementProgress(habit.id, date);
     } else {
       toggleHabitComplete(habit.id, date);
     }
   };
 
   return (
-    <>
-      <HabitCardPressable
-        habit={habit}
-        completion={completion}
-        emoji={emoji}
-        isComplete={isComplete}
-        hasSubTasks={hasSubTasks}
-        onPress={handlePress}
-        onLongPress={() => router.push(`/habit/${habit.id}?date=${date}`)}
-      />
-      {hasSubTasks && (
-        <HabitStepsSheet
-          habit={habit}
-          completion={completion}
-          date={date}
-          bottomSheetRef={bottomSheetRef}
-        />
-      )}
-    </>
+    <HabitCardPressable
+      habit={habit}
+      completion={completion}
+      emoji={emoji}
+      isComplete={isComplete}
+      hasTracking={hasTracking}
+      onPress={handlePress}
+      onLongPress={() => router.push(`/habit/${habit.id}?date=${date}`)}
+    />
   );
 }
 
@@ -99,7 +89,7 @@ type HabitCardPressableProps = {
   completion?: HabitCompletion;
   emoji: string;
   isComplete: boolean;
-  hasSubTasks: boolean;
+  hasTracking: boolean;
   onPress: () => void;
   onLongPress: () => void;
 };
@@ -109,13 +99,11 @@ function HabitCardPressable({
   completion,
   emoji,
   isComplete,
-  hasSubTasks,
+  hasTracking,
   onPress,
   onLongPress,
 }: HabitCardPressableProps): React.ReactElement {
   const scale = useSharedValue(1);
-  const completedCount = completion?.completedSubTasks.length ?? 0;
-  const totalCount = habit.subTasks?.length ?? 0;
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
@@ -150,14 +138,47 @@ function HabitCardPressable({
         >
           {habit.name}
         </Text>
-        {hasSubTasks && (
-          <Text className="mt-0.5 text-sm text-neutral-400 dark:text-neutral-500">
-            {completedCount} of {totalCount} steps
-          </Text>
+        {hasTracking && habit.tracking && (
+          <ProgressIndicator
+            progress={completion?.progress ?? 0}
+            goal={habit.tracking.goal}
+            unit={habit.tracking.unit}
+          />
         )}
       </View>
       <CheckIndicator isComplete={isComplete} />
     </AnimatedPressable>
+  );
+}
+
+type ProgressIndicatorProps = {
+  progress: number;
+  goal: number;
+  unit?: string;
+};
+
+function ProgressIndicator({
+  progress,
+  goal,
+  unit,
+}: ProgressIndicatorProps): React.ReactElement {
+  const percentage = Math.min((progress / goal) * 100, 100);
+
+  return (
+    <View className="mt-1.5">
+      <Text className="text-sm text-neutral-400 dark:text-neutral-500">
+        {progress} / {goal} {unit}
+      </Text>
+      <View className="mt-1 h-1.5 overflow-hidden rounded-full bg-neutral-100 dark:bg-charcoal-700">
+        <View
+          className={cn(
+            'h-full rounded-full',
+            percentage >= 100 ? 'bg-success-500' : 'bg-primary-400'
+          )}
+          style={{ width: `${percentage}%` }}
+        />
+      </View>
+    </View>
   );
 }
 

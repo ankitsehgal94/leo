@@ -1,17 +1,29 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as React from 'react';
 import { Alert, Pressable, ScrollView } from 'react-native';
+import Animated, {
+  FadeInDown,
+  FadeOut,
+  useAnimatedStyle,
+  useSharedValue,
+  withSequence,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
 
-import { SubTaskItem } from '@/components/sub-task-item';
 import { FocusAwareStatusBar, SafeAreaView, Text, View } from '@/components/ui';
 import { ArrowRight } from '@/components/ui/icons';
+import { cn } from '@/lib';
 import { useHabitStore } from '@/lib/stores';
-import type { Habit, HabitCompletion, SubTask } from '@/types';
+import type { Habit, HabitCompletion, TrackingConfig } from '@/types';
+
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 const TIME_OF_DAY_CONFIG = {
   morning: { label: 'Morning', emoji: '☀️' },
   afternoon: { label: 'Afternoon', emoji: '🌤️' },
   evening: { label: 'Evening', emoji: '🌙' },
+  anytime: { label: 'Anytime', emoji: '∞' },
 };
 
 function getToday(): string {
@@ -110,7 +122,8 @@ export default function HabitDetail(): React.ReactElement {
   const params = useLocalSearchParams<{ id: string; date?: string }>();
   const router = useRouter();
   const toggleHabitComplete = useHabitStore.use.toggleHabitComplete();
-  const toggleSubTaskComplete = useHabitStore.use.toggleSubTaskComplete();
+  const incrementProgress = useHabitStore.use.incrementProgress();
+  const decrementProgress = useHabitStore.use.decrementProgress();
   const deleteHabit = useHabitStore.use.deleteHabit();
 
   const { habit, selectedDate, isToday, completion, last7Days } =
@@ -118,7 +131,9 @@ export default function HabitDetail(): React.ReactElement {
 
   if (!habit) return <HabitNotFound onBack={() => router.back()} />;
 
-  const hasSubTasks = Boolean(habit.subTasks && habit.subTasks.length > 0);
+  const hasTracking = Boolean(
+    habit.tracking && habit.tracking.type !== 'simple'
+  );
   const isComplete = completion?.isComplete ?? false;
   const timeConfig = TIME_OF_DAY_CONFIG[habit.timeOfDay];
   const dateLabel = formatDateLabel(selectedDate);
@@ -145,14 +160,13 @@ export default function HabitDetail(): React.ReactElement {
       dateLabel={dateLabel}
       last7Days={last7Days}
       completion={completion}
-      hasSubTasks={hasSubTasks}
+      hasTracking={hasTracking}
       isComplete={isComplete}
       selectedDate={selectedDate}
       onBack={() => router.back()}
       onToggleComplete={() => toggleHabitComplete(habit.id, selectedDate)}
-      onToggleSubTask={(id) =>
-        toggleSubTaskComplete(habit.id, id, selectedDate)
-      }
+      onIncrement={() => incrementProgress(habit.id, selectedDate)}
+      onDecrement={() => decrementProgress(habit.id, selectedDate)}
       onDelete={handleDelete}
     />
   );
@@ -165,12 +179,13 @@ type HabitDetailViewProps = {
   dateLabel: string;
   last7Days: HistoryDayData[];
   completion?: HabitCompletion;
-  hasSubTasks: boolean;
+  hasTracking: boolean;
   isComplete: boolean;
   selectedDate: string;
   onBack: () => void;
   onToggleComplete: () => void;
-  onToggleSubTask: (id: string) => void;
+  onIncrement: () => void;
+  onDecrement: () => void;
   onDelete: () => void;
 };
 
@@ -189,12 +204,13 @@ function HabitDetailView(props: HabitDetailViewProps): React.ReactElement {
         <HabitActions
           habit={props.habit}
           completion={props.completion}
-          hasSubTasks={props.hasSubTasks ?? false}
+          hasTracking={props.hasTracking}
           isComplete={props.isComplete}
           isToday={props.isToday}
           dateLabel={props.dateLabel}
           onToggleComplete={props.onToggleComplete}
-          onToggleSubTask={props.onToggleSubTask}
+          onIncrement={props.onIncrement}
+          onDecrement={props.onDecrement}
         />
         {props.isComplete && (
           <SuccessState isToday={props.isToday} dateLabel={props.dateLabel} />
@@ -286,80 +302,302 @@ function HistorySection({
 type HabitActionsProps = {
   habit: Habit;
   completion?: HabitCompletion;
-  hasSubTasks: boolean;
+  hasTracking: boolean;
   isComplete: boolean;
   isToday: boolean;
   dateLabel: string;
   onToggleComplete: () => void;
-  onToggleSubTask: (subTaskId: string) => void;
+  onIncrement: () => void;
+  onDecrement: () => void;
 };
 
 function HabitActions({
   habit,
   completion,
-  hasSubTasks,
+  hasTracking,
   isComplete,
   isToday,
   dateLabel,
   onToggleComplete,
-  onToggleSubTask,
+  onIncrement,
+  onDecrement,
 }: HabitActionsProps): React.ReactElement {
   const completedLabel = isToday ? 'Today' : dateLabel;
   const buttonText = isComplete
     ? `✓ Completed for ${completedLabel}`
     : 'Mark as Complete';
 
+  if (hasTracking && habit.tracking) {
+    return (
+      <View className="mt-4 px-4">
+        <ProgressTracker
+          tracking={habit.tracking}
+          progress={completion?.progress ?? 0}
+          isComplete={isComplete}
+          onIncrement={onIncrement}
+          onDecrement={onDecrement}
+        />
+      </View>
+    );
+  }
+
   return (
     <View className="mt-4 px-4">
-      {hasSubTasks ? (
-        <SubTasksList
-          subTasks={habit.subTasks ?? []}
-          completedSubTasks={completion?.completedSubTasks ?? []}
-          onToggle={onToggleSubTask}
-        />
-      ) : (
-        <Pressable
-          onPress={onToggleComplete}
-          className={`rounded-2xl p-4 ${isComplete ? 'bg-success-500' : 'bg-white'}`}
+      <Pressable
+        onPress={onToggleComplete}
+        className={`rounded-2xl p-4 ${isComplete ? 'bg-success-500' : 'bg-white'}`}
+      >
+        <Text
+          className={`text-center text-lg font-semibold ${
+            isComplete ? 'text-white' : 'text-neutral-800'
+          }`}
         >
-          <Text
-            className={`text-center text-lg font-semibold ${
-              isComplete ? 'text-white' : 'text-neutral-800'
-            }`}
-          >
-            {buttonText}
-          </Text>
-        </Pressable>
+          {buttonText}
+        </Text>
+      </Pressable>
+    </View>
+  );
+}
+
+type ProgressTrackerProps = {
+  tracking: TrackingConfig;
+  progress: number;
+  isComplete: boolean;
+  onIncrement: () => void;
+  onDecrement: () => void;
+};
+
+function useProgressDirection(progress: number): {
+  direction: 'up' | 'down';
+  setDirection: (dir: 'up' | 'down') => void;
+} {
+  const [direction, setDirection] = React.useState<'up' | 'down'>('up');
+  const prevProgress = React.useRef(progress);
+
+  React.useEffect(() => {
+    if (progress > prevProgress.current) setDirection('up');
+    else if (progress < prevProgress.current) setDirection('down');
+    prevProgress.current = progress;
+  }, [progress]);
+
+  return { direction, setDirection };
+}
+
+function ProgressTracker({
+  tracking,
+  progress,
+  isComplete,
+  onIncrement,
+  onDecrement,
+}: ProgressTrackerProps): React.ReactElement {
+  const percentage = Math.min((progress / tracking.goal) * 100, 100);
+  const { direction, setDirection } = useProgressDirection(progress);
+
+  const handleIncrement = (): void => {
+    setDirection('up');
+    onIncrement();
+  };
+
+  const handleDecrement = (): void => {
+    setDirection('down');
+    onDecrement();
+  };
+
+  return (
+    <View className="rounded-2xl bg-white p-4">
+      <Text className="mb-4 text-sm font-semibold text-neutral-500">
+        DAILY PROGRESS
+      </Text>
+      <ProgressDisplay
+        progress={progress}
+        goal={tracking.goal}
+        unit={tracking.unit}
+        direction={direction}
+      />
+      <ProgressBar percentage={percentage} isComplete={isComplete} />
+      <ProgressControls
+        progress={progress}
+        isComplete={isComplete}
+        onIncrement={handleIncrement}
+        onDecrement={handleDecrement}
+      />
+      {isComplete && (
+        <Text className="mt-4 text-center text-sm font-medium text-success-600">
+          🎉 Goal reached!
+        </Text>
       )}
     </View>
   );
 }
 
-type SubTasksListProps = {
-  subTasks: SubTask[];
-  completedSubTasks: string[];
-  onToggle: (id: string) => void;
+type ProgressDisplayProps = {
+  progress: number;
+  goal: number;
+  unit?: string;
+  direction: 'up' | 'down';
 };
 
-function SubTasksList({
-  subTasks,
-  completedSubTasks,
-  onToggle,
-}: SubTasksListProps): React.ReactElement {
+function ProgressDisplay({
+  progress,
+  goal,
+  unit,
+  direction,
+}: ProgressDisplayProps): React.ReactElement {
   return (
-    <>
-      <Text className="mb-3 text-sm font-semibold text-neutral-500">
-        STEPS ({completedSubTasks.length}/{subTasks.length})
+    <View className="mb-4 items-center">
+      <View className="flex-row items-baseline">
+        <TickerNumber value={progress} direction={direction} />
+        <Text className="font-poppins-bold text-2xl text-neutral-400">
+          /{goal}
+        </Text>
+      </View>
+      <Text className="mt-1 text-sm text-neutral-500">{unit}</Text>
+    </View>
+  );
+}
+
+function ProgressBar({
+  percentage,
+  isComplete,
+}: {
+  percentage: number;
+  isComplete: boolean;
+}): React.ReactElement {
+  return (
+    <View className="mb-6 h-3 overflow-hidden rounded-full bg-neutral-100">
+      <Animated.View
+        className={cn(
+          'h-full rounded-full',
+          isComplete ? 'bg-success-500' : 'bg-primary-400'
+        )}
+        style={{ width: `${percentage}%` }}
+      />
+    </View>
+  );
+}
+
+type ProgressControlsProps = {
+  progress: number;
+  isComplete: boolean;
+  onIncrement: () => void;
+  onDecrement: () => void;
+};
+
+function ProgressControls({
+  progress,
+  isComplete,
+  onIncrement,
+  onDecrement,
+}: ProgressControlsProps): React.ReactElement {
+  return (
+    <View className="flex-row items-center justify-center gap-6">
+      <ProgressButton icon="−" onPress={onDecrement} disabled={progress <= 0} />
+      <ProgressButton
+        icon="+"
+        onPress={onIncrement}
+        isPrimary
+        isComplete={isComplete}
+      />
+    </View>
+  );
+}
+
+type TickerNumberProps = {
+  value: number;
+  direction: 'up' | 'down';
+};
+
+function TickerNumber({
+  value,
+  direction,
+}: TickerNumberProps): React.ReactElement {
+  const key = `${value}-${Date.now()}`;
+
+  // Subtle, gentle animations
+  const enteringAnimation =
+    direction === 'up'
+      ? FadeInDown.duration(200).withInitialValues({
+          transform: [{ translateY: -10 }],
+        })
+      : FadeInDown.duration(200).withInitialValues({
+          transform: [{ translateY: 10 }],
+        });
+
+  const exitingAnimation = FadeOut.duration(100);
+
+  return (
+    <View className="h-12 items-center justify-center">
+      <Animated.Text
+        key={key}
+        entering={enteringAnimation}
+        exiting={exitingAnimation}
+        className="font-poppins-bold text-4xl text-neutral-800"
+      >
+        {value}
+      </Animated.Text>
+    </View>
+  );
+}
+
+type ProgressButtonProps = {
+  icon: string;
+  onPress: () => void;
+  disabled?: boolean;
+  isPrimary?: boolean;
+  isComplete?: boolean;
+};
+
+function ProgressButton({
+  icon,
+  onPress,
+  disabled,
+  isPrimary,
+  isComplete,
+}: ProgressButtonProps): React.ReactElement {
+  const scale = useSharedValue(1);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
+  const handlePress = (): void => {
+    if (disabled) return;
+    scale.value = withSequence(
+      withTiming(0.85, { duration: 50 }),
+      withSpring(1, { damping: 10, stiffness: 400 })
+    );
+    onPress();
+  };
+
+  const getBackgroundClass = (): string => {
+    if (disabled) return 'bg-neutral-100';
+    if (isPrimary) return isComplete ? 'bg-success-500' : 'bg-primary-500';
+    return 'bg-neutral-200';
+  };
+
+  return (
+    <AnimatedPressable
+      onPress={handlePress}
+      disabled={disabled}
+      style={animatedStyle}
+      className={cn(
+        'size-14 items-center justify-center rounded-full',
+        getBackgroundClass()
+      )}
+    >
+      <Text
+        className={cn(
+          'text-2xl font-bold',
+          disabled
+            ? 'text-neutral-300'
+            : isPrimary
+              ? 'text-white'
+              : 'text-neutral-600'
+        )}
+      >
+        {icon}
       </Text>
-      {subTasks.map((subTask) => (
-        <SubTaskItem
-          key={subTask.id}
-          subTask={subTask}
-          isCompleted={completedSubTasks.includes(subTask.id)}
-          onToggle={() => onToggle(subTask.id)}
-        />
-      ))}
-    </>
+    </AnimatedPressable>
   );
 }
 

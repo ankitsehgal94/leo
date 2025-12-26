@@ -37,11 +37,6 @@ function TemplateCard({
           <Text className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
             {template.description}
           </Text>
-          {template.subTasks && (
-            <Text className="mt-1 text-xs text-neutral-400 dark:text-neutral-500">
-              {template.subTasks.length} steps
-            </Text>
-          )}
         </View>
       </View>
       <Pressable onPress={onUse} className="mt-3 rounded-xl bg-primary-50 py-2">
@@ -120,7 +115,8 @@ export default function Discover(): React.ReactElement {
           addHabit({
             name: template.name,
             timeOfDay: template.timeOfDay,
-            subTasks: template.subTasks,
+            frequency: 'daily',
+            reminderEnabled: false,
           });
           Alert.alert('Success', `"${template.name}" has been added!`);
         },
