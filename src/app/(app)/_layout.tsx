@@ -11,7 +11,7 @@ import {
   Journal as JournalIcon,
   User as UserIcon,
 } from '@/components/ui/icons';
-import { useIsFirstTime } from '@/lib';
+import { useIsFirstTime, useWidgetSync } from '@/lib';
 
 function getTabBarStyle(isDark: boolean) {
   return {
@@ -103,6 +103,9 @@ function TabScreens(): React.ReactElement {
 export default function TabLayout(): React.ReactElement {
   const [isFirstTime] = useIsFirstTime();
   useSplashScreen();
+
+  // Sync habit data with iOS widgets
+  useWidgetSync();
 
   if (isFirstTime) {
     return <Redirect href="/onboarding" />;

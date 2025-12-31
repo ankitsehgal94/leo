@@ -194,7 +194,7 @@ export function DailyInsight({
 }: Props): React.ReactElement {
   const userName = useUserName();
   const progress = totalCount > 0 ? completedCount / totalCount : 0;
-  const percentage = Math.round(progress * 100);
+  const percentage = Math.floor(progress * 100);
   const mood = getMoodFromProgress(progress);
   const message = getMoodMessage(mood, userName);
   const subtitle = getMoodSubtitle(mood);

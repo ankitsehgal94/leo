@@ -19,6 +19,9 @@ const appIconBadgeConfig: AppIconBadgeConfig = {
   ],
 };
 
+// App Group for sharing data with widgets
+const APP_GROUP = 'group.com.leo.shared';
+
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
   name: Env.NAME,
@@ -40,6 +43,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     bundleIdentifier: Env.BUNDLE_ID,
     infoPlist: {
       ITSAppUsesNonExemptEncryption: false,
+    },
+    entitlements: {
+      'com.apple.security.application-groups': [APP_GROUP],
     },
   },
   experiments: {
@@ -73,9 +79,10 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     ],
     'expo-localization',
     'expo-router',
-    'expo-notifications',
+    ...(Env.APP_ENV === 'production' ? ['expo-notifications'] : []),
     ['app-icon-badge', appIconBadgeConfig],
     ['react-native-edge-to-edge'],
+    '@bacons/apple-targets',
   ],
   extra: {
     ...ClientEnv,

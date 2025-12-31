@@ -41,6 +41,7 @@
     "e2e-test": "maestro test .maestro/ -e APP_ID=com.obytes.development"
   },
   "dependencies": {
+    "@bacons/apple-targets": "^3.0.6",
     "@expo-google-fonts/nunito": "^0.4.2",
     "@expo-google-fonts/poppins": "^0.4.1",
     "@expo/metro-runtime": "^5.0.4",
@@ -88,10 +89,12 @@
     "react-native-restart": "0.0.27",
     "react-native-safe-area-context": "5.4.0",
     "react-native-screens": "^4.11.1",
+    "react-native-shared-group-preferences": "^1.1.24",
     "react-native-svg": "~15.11.2",
     "react-native-ui-datepicker": "^3.1.2",
     "react-native-url-polyfill": "^2.0.0",
     "react-native-web": "~0.20.0",
+    "react-native-widgetkit": "^1.0.9",
     "react-query-kit": "^3.3.0",
     "tailwind-merge": "^3.4.0",
     "tailwind-variants": "^0.2.1",
