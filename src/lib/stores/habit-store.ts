@@ -14,6 +14,7 @@ type HabitState = {
   isLoading: boolean;
   hydrate: () => void;
   addHabit: (habit: Omit<Habit, 'id' | 'createdAt'>) => void;
+  addMultipleHabits: (habits: Omit<Habit, 'id' | 'createdAt'>[]) => void;
   updateHabit: (
     id: string,
     updates: Partial<Omit<Habit, 'id' | 'createdAt'>>
@@ -115,6 +116,17 @@ function createHabitActions(set: StoreSet, get: StoreGet) {
         createdAt: new Date().toISOString(),
       };
       const habits = [...get().habits, newHabit];
+      set({ habits });
+      setItem(HABITS_KEY, habits);
+    },
+
+    addMultipleHabits: (habitsData: Omit<Habit, 'id' | 'createdAt'>[]) => {
+      const newHabits: Habit[] = habitsData.map((habitData) => ({
+        ...habitData,
+        id: generateId(),
+        createdAt: new Date().toISOString(),
+      }));
+      const habits = [...get().habits, ...newHabits];
       set({ habits });
       setItem(HABITS_KEY, habits);
     },
