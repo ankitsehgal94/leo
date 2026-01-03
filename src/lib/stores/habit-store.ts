@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-import type { Habit, HabitCompletion, TimeOfDay } from '@/types';
+import type { DayOfWeek, Habit, HabitCompletion, TimeOfDay } from '@/types';
 
 import { getItem, setItem } from '../storage';
 import { createSelectors } from '../utils';
@@ -8,13 +8,115 @@ import { createSelectors } from '../utils';
 const HABITS_KEY = 'habits';
 const COMPLETIONS_KEY = 'habit_completions';
 
+// Map JS day (0=Sun) to DayOfWeek
+const JS_DAY_TO_DAY_OF_WEEK: DayOfWeek[] = [
+  'sun',
+  'mon',
+  'tue',
+  'wed',
+  'thu',
+  'fri',
+  'sat',
+];
+
+// Check if a date is a scheduled day for the habit
+function isScheduledDay(habit: Habit, dateStr: string): boolean {
+  if (habit.frequency === 'daily') return true;
+  const date = new Date(dateStr + 'T12:00:00');
+  const dayOfWeek = JS_DAY_TO_DAY_OF_WEEK[date.getDay()];
+  return habit.selectedDays?.includes(dayOfWeek) ?? false;
+}
+
+// Format date as YYYY-MM-DD (using local timezone)
+function formatDate(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
+// Get previous date string
+function getPreviousDate(dateStr: string): string {
+  const date = new Date(dateStr + 'T12:00:00');
+  date.setDate(date.getDate() - 1);
+  return formatDate(date);
+}
+
+// Calculate current streak for a habit
+function calculateCurrentStreak(
+  habit: Habit,
+  completions: HabitCompletion[],
+  fromDate: string
+): number {
+  const habitCompletions = completions.filter((c) => c.habitId === habit.id);
+  const completionMap = new Map(
+    habitCompletions.map((c) => [c.date, c.isComplete])
+  );
+
+  let streak = 0;
+  let currentDate = fromDate;
+
+  // Check if fromDate itself is completed (if it's a scheduled day)
+  if (isScheduledDay(habit, currentDate)) {
+    if (completionMap.get(currentDate)) {
+      streak = 1;
+    } else {
+      return 0; // Today is scheduled but not completed
+    }
+  }
+
+  // Walk backward through previous days
+  currentDate = getPreviousDate(currentDate);
+  const createdDate = habit.createdAt.split('T')[0];
+
+  // Limit search to prevent infinite loops (max 2 years back)
+  const maxDays = 730;
+  let daysChecked = 0;
+
+  while (daysChecked < maxDays && currentDate >= createdDate) {
+    if (isScheduledDay(habit, currentDate)) {
+      if (completionMap.get(currentDate)) {
+        streak++;
+      } else {
+        break; // Streak broken
+      }
+    }
+    // Skip non-scheduled days (they don't break the streak)
+    currentDate = getPreviousDate(currentDate);
+    daysChecked++;
+  }
+
+  return streak;
+}
+
+// Update habit with new streak values
+function updateHabitStreak(
+  habit: Habit,
+  completions: HabitCompletion[],
+  date: string
+): Habit {
+  const currentStreak = calculateCurrentStreak(habit, completions, date);
+  const longestStreak = Math.max(habit.longestStreak, currentStreak);
+  return { ...habit, currentStreak, longestStreak };
+}
+
+// Get today's date in YYYY-MM-DD format (using local timezone)
+function getToday(): string {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+}
+
 type HabitState = {
   habits: Habit[];
   completions: HabitCompletion[];
   isLoading: boolean;
   hydrate: () => void;
-  addHabit: (habit: Omit<Habit, 'id' | 'createdAt'>) => void;
-  addMultipleHabits: (habits: Omit<Habit, 'id' | 'createdAt'>[]) => void;
+  addHabit: (
+    habit: Omit<Habit, 'id' | 'createdAt' | 'currentStreak' | 'longestStreak'>
+  ) => void;
+  addMultipleHabits: (
+    habits: Omit<
+      Habit,
+      'id' | 'createdAt' | 'currentStreak' | 'longestStreak'
+    >[]
+  ) => void;
   updateHabit: (
     id: string,
     updates: Partial<Omit<Habit, 'id' | 'createdAt'>>
@@ -100,32 +202,73 @@ function handleProgressUpdate(
   );
 }
 
+// Helper: Create a new habit with default fields
+function createNewHabit(
+  habitData: Omit<Habit, 'id' | 'createdAt' | 'currentStreak' | 'longestStreak'>
+): Habit {
+  return {
+    ...habitData,
+    id: generateId(),
+    createdAt: new Date().toISOString(),
+    currentStreak: 0,
+    longestStreak: 0,
+  };
+}
+
+// Helper: Migrate habits without streak fields
+function migrateHabits(
+  storedHabits: Habit[],
+  completions: HabitCompletion[]
+): Habit[] {
+  const today = getToday();
+  return storedHabits.map((habit) => {
+    const needsMigration =
+      habit.currentStreak === undefined || habit.longestStreak === undefined;
+    if (needsMigration) {
+      const currentStreak = calculateCurrentStreak(habit, completions, today);
+      return { ...habit, currentStreak, longestStreak: currentStreak };
+    }
+    return habit;
+  });
+}
+
 // Store action creators
 function createHabitActions(set: StoreSet, get: StoreGet) {
   return {
     hydrate: () => {
-      const habits = getItem<Habit[]>(HABITS_KEY) ?? [];
+      const storedHabits = getItem<Habit[]>(HABITS_KEY) ?? [];
       const completions = getItem<HabitCompletion[]>(COMPLETIONS_KEY) ?? [];
+      const habits = migrateHabits(storedHabits, completions);
+
+      const hasMigrations = storedHabits.some(
+        (h) => h.currentStreak === undefined || h.longestStreak === undefined
+      );
+      if (hasMigrations) {
+        setItem(HABITS_KEY, habits);
+      }
+
       set({ habits, completions, isLoading: false });
     },
 
-    addHabit: (habitData: Omit<Habit, 'id' | 'createdAt'>) => {
-      const newHabit: Habit = {
-        ...habitData,
-        id: generateId(),
-        createdAt: new Date().toISOString(),
-      };
+    addHabit: (
+      habitData: Omit<
+        Habit,
+        'id' | 'createdAt' | 'currentStreak' | 'longestStreak'
+      >
+    ) => {
+      const newHabit = createNewHabit(habitData);
       const habits = [...get().habits, newHabit];
       set({ habits });
       setItem(HABITS_KEY, habits);
     },
 
-    addMultipleHabits: (habitsData: Omit<Habit, 'id' | 'createdAt'>[]) => {
-      const newHabits: Habit[] = habitsData.map((habitData) => ({
-        ...habitData,
-        id: generateId(),
-        createdAt: new Date().toISOString(),
-      }));
+    addMultipleHabits: (
+      habitsData: Omit<
+        Habit,
+        'id' | 'createdAt' | 'currentStreak' | 'longestStreak'
+      >[]
+    ) => {
+      const newHabits = habitsData.map(createNewHabit);
       const habits = [...get().habits, ...newHabits];
       set({ habits });
       setItem(HABITS_KEY, habits);
@@ -166,25 +309,50 @@ function createCompletionActions(set: StoreSet, get: StoreGet) {
         ? toggleExistingCompletion(existing, get().completions)
         : [...get().completions, createNewCompletion(ctx)];
 
-      set({ completions });
+      // Update streak for this habit
+      const updatedHabit = updateHabitStreak(habit, completions, getToday());
+      const habits = get().habits.map((h) =>
+        h.id === habitId ? updatedHabit : h
+      );
+
+      set({ completions, habits });
       setItem(COMPLETIONS_KEY, completions);
+      setItem(HABITS_KEY, habits);
     },
   };
 }
 
 function createProgressActions(set: StoreSet, get: StoreGet) {
+  // Helper: Update progress and streak for a habit
+  function updateProgressAndStreak(
+    habit: Habit,
+    completions: HabitCompletion[],
+    ctx: ToggleContext & { progress: number }
+  ): void {
+    const updatedCompletions = handleProgressUpdate(habit, completions, ctx);
+    const updatedHabit = updateHabitStreak(
+      habit,
+      updatedCompletions,
+      getToday()
+    );
+    const habits = get().habits.map((h) =>
+      h.id === ctx.habitId ? updatedHabit : h
+    );
+
+    set({ completions: updatedCompletions, habits });
+    setItem(COMPLETIONS_KEY, updatedCompletions);
+    setItem(HABITS_KEY, habits);
+  }
+
   return {
     updateProgress: (habitId: string, date: string, progress: number) => {
       const habit = get().habits.find((h) => h.id === habitId);
       if (!habit) return;
-
-      const completions = handleProgressUpdate(habit, get().completions, {
+      updateProgressAndStreak(habit, get().completions, {
         habitId,
         date,
         progress,
       });
-      set({ completions });
-      setItem(COMPLETIONS_KEY, completions);
     },
 
     incrementProgress: (habitId: string, date: string) => {
@@ -194,16 +362,13 @@ function createProgressActions(set: StoreSet, get: StoreGet) {
       const existing = get().completions.find(
         (c) => c.habitId === habitId && c.date === date
       );
-      const currentProgress = existing?.progress ?? 0;
-      const newProgress = currentProgress + 1;
+      const newProgress = (existing?.progress ?? 0) + 1;
 
-      const completions = handleProgressUpdate(habit, get().completions, {
+      updateProgressAndStreak(habit, get().completions, {
         habitId,
         date,
         progress: newProgress,
       });
-      set({ completions });
-      setItem(COMPLETIONS_KEY, completions);
     },
 
     decrementProgress: (habitId: string, date: string) => {
@@ -213,16 +378,13 @@ function createProgressActions(set: StoreSet, get: StoreGet) {
       const existing = get().completions.find(
         (c) => c.habitId === habitId && c.date === date
       );
-      const currentProgress = existing?.progress ?? 0;
-      const newProgress = Math.max(0, currentProgress - 1);
+      const newProgress = Math.max(0, (existing?.progress ?? 0) - 1);
 
-      const completions = handleProgressUpdate(habit, get().completions, {
+      updateProgressAndStreak(habit, get().completions, {
         habitId,
         date,
         progress: newProgress,
       });
-      set({ completions });
-      setItem(COMPLETIONS_KEY, completions);
     },
   };
 }

@@ -18,7 +18,66 @@ const TIME_OF_DAY_CONFIG: Record<TimeOfDay, { label: string; emoji: string }> =
   };
 
 function getToday(): string {
-  return new Date().toISOString().split('T')[0];
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+}
+
+function getLocalDateString(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
+function calculateDailyStreak(
+  habits: Habit[],
+  completions: HabitCompletion[]
+): { current: number; longest: number } {
+  if (habits.length === 0) return { current: 0, longest: 0 };
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  let currentStreak = 0;
+  let longestStreak = 0;
+  let tempStreak = 0;
+  let currentStreakBroken = false;
+
+  // Check up to 365 days back
+  for (let i = 0; i < 365; i++) {
+    const checkDate = new Date(today);
+    checkDate.setDate(checkDate.getDate() - i);
+    const dateStr = getLocalDateString(checkDate);
+
+    // Only check habits that existed on this day
+    const habitsForDay = habits.filter((habit) => {
+      const createdDate = habit.createdAt.split('T')[0];
+      return dateStr >= createdDate;
+    });
+
+    if (habitsForDay.length === 0) break;
+
+    const allCompleted = habitsForDay.every((habit) => {
+      const completion = completions.find(
+        (c) => c.habitId === habit.id && c.date === dateStr
+      );
+      return completion?.isComplete ?? false;
+    });
+
+    if (allCompleted) {
+      tempStreak++;
+      if (!currentStreakBroken) {
+        currentStreak = tempStreak;
+      }
+      longestStreak = Math.max(longestStreak, tempStreak);
+    } else if (i === 0) {
+      // Today not complete yet - don't break current streak, just don't count today
+      // Continue checking from yesterday
+    } else {
+      // Past day not complete - current streak is broken, but keep looking for longest
+      currentStreakBroken = true;
+      tempStreak = 0; // Reset temp streak to find other streaks in history
+    }
+  }
+
+  return { current: currentStreak, longest: longestStreak };
 }
 
 function formatHeaderDate(dateStr: string): string {
@@ -58,6 +117,12 @@ export default function Today(): React.ReactElement {
     return { totalCount, completedCount, remainingCount };
   }, [habits, completions, selectedDate]);
 
+  // Calculate daily streak (all habits completed)
+  const dailyStreak = React.useMemo(
+    () => calculateDailyStreak(habits, completions),
+    [habits, completions]
+  );
+
   const habitsByTime = React.useMemo(() => {
     const timeOfDays: TimeOfDay[] = [
       'morning',
@@ -83,6 +148,7 @@ export default function Today(): React.ReactElement {
           habitsByTime={habitsByTime}
           completions={completions}
           completionStats={completionStats}
+          dailyStreak={dailyStreak}
           userName={userName}
         />
       ) : (
@@ -122,12 +188,18 @@ type CompletionStats = {
   remainingCount: number;
 };
 
+type DailyStreakData = {
+  current: number;
+  longest: number;
+};
+
 type HabitsListProps = {
   selectedDate: string;
   setSelectedDate: (date: string) => void;
   habitsByTime: { timeOfDay: TimeOfDay; habits: Habit[] }[];
   completions: HabitCompletion[];
   completionStats: CompletionStats;
+  dailyStreak: DailyStreakData;
   userName?: string;
 };
 
@@ -137,6 +209,7 @@ function HabitsList({
   habitsByTime,
   completions,
   completionStats,
+  dailyStreak,
   userName,
 }: HabitsListProps): React.ReactElement {
   return (
@@ -146,6 +219,8 @@ function HabitsList({
       <DailyInsight
         completedCount={completionStats.completedCount}
         totalCount={completionStats.totalCount}
+        currentStreak={dailyStreak.current}
+        longestStreak={dailyStreak.longest}
       />
 
       {/* Habits Section */}

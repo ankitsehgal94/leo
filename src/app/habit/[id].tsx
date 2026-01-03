@@ -191,7 +191,7 @@ type HabitDetailViewProps = {
 
 function HabitDetailView(props: HabitDetailViewProps): React.ReactElement {
   return (
-    <SafeAreaView className="flex-1 bg-neutral-50">
+    <SafeAreaView className="flex-1 bg-neutral-50 dark:bg-charcoal-900">
       <FocusAwareStatusBar />
       <HabitHeader
         habit={props.habit}
@@ -201,6 +201,10 @@ function HabitDetailView(props: HabitDetailViewProps): React.ReactElement {
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
         {!props.isToday && <DateIndicator dateLabel={props.dateLabel} />}
         <HistorySection last7Days={props.last7Days} />
+        <StreakSection
+          currentStreak={props.habit.currentStreak}
+          longestStreak={props.habit.longestStreak}
+        />
         <HabitActions
           habit={props.habit}
           completion={props.completion}
@@ -295,6 +299,62 @@ function HistorySection({
           <HistoryDay key={day.date} {...day} />
         ))}
       </View>
+    </View>
+  );
+}
+
+type StreakSectionProps = {
+  currentStreak: number;
+  longestStreak: number;
+};
+
+function StreakSection({
+  currentStreak,
+  longestStreak,
+}: StreakSectionProps): React.ReactElement {
+  const isMilestone =
+    currentStreak === 7 ||
+    currentStreak === 30 ||
+    currentStreak === 100 ||
+    currentStreak === 365;
+
+  return (
+    <View className="mx-4 mt-4 rounded-2xl bg-white p-4 dark:bg-charcoal-850">
+      <Text className="mb-3 text-sm font-semibold text-neutral-500 dark:text-neutral-400">
+        STREAK
+      </Text>
+      <View className="flex-row items-center justify-around">
+        <View className="items-center">
+          <View className="flex-row items-center">
+            <Text className="text-3xl">🔥</Text>
+            <Text className="ml-2 font-poppins-bold text-3xl text-neutral-800 dark:text-neutral-100">
+              {currentStreak}
+            </Text>
+          </View>
+          <Text className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
+            Current Streak
+          </Text>
+        </View>
+        <View className="h-12 w-px bg-neutral-100 dark:bg-charcoal-700" />
+        <View className="items-center">
+          <View className="flex-row items-center">
+            <Text className="text-2xl">🏆</Text>
+            <Text className="ml-2 font-poppins-bold text-2xl text-neutral-600 dark:text-neutral-300">
+              {longestStreak}
+            </Text>
+          </View>
+          <Text className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
+            Best Streak
+          </Text>
+        </View>
+      </View>
+      {isMilestone && (
+        <View className="mt-4 rounded-xl bg-amber-50 p-3 dark:bg-amber-900/20">
+          <Text className="text-center text-sm font-medium text-amber-700 dark:text-amber-400">
+            🎉 Amazing! You&apos;ve hit a {currentStreak}-day milestone!
+          </Text>
+        </View>
+      )}
     </View>
   );
 }

@@ -39,6 +39,8 @@ export type Habit = {
   reminderTime?: string; // HH:mm format, e.g., "07:00"
   tracking?: TrackingConfig;
   createdAt: string;
+  currentStreak: number; // Consecutive completions (scheduled days only)
+  longestStreak: number; // All-time best streak
 };
 
 export type HabitCompletion = {

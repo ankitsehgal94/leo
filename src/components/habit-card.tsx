@@ -128,16 +128,25 @@ function HabitCardPressable({
     >
       <EmojiIcon emoji={emoji} isComplete={isComplete} />
       <View className="ml-3 flex-1">
-        <Text
-          className={cn(
-            'font-poppins-semibold text-base',
-            isComplete
-              ? 'text-neutral-400 line-through dark:text-neutral-500'
-              : 'text-neutral-800 dark:text-neutral-100'
+        <View className="flex-row items-center">
+          <Text
+            className={cn(
+              'font-poppins-semibold text-base',
+              isComplete
+                ? 'text-neutral-400 line-through dark:text-neutral-500'
+                : 'text-neutral-800 dark:text-neutral-100'
+            )}
+          >
+            {habit.name}
+          </Text>
+          {habit.currentStreak >= 2 && (
+            <View className="ml-2 flex-row items-center rounded-full bg-amber-50 px-2 py-0.5 dark:bg-amber-900/30">
+              <Text className="text-xs text-amber-600 dark:text-amber-400">
+                🔥 {habit.currentStreak}
+              </Text>
+            </View>
           )}
-        >
-          {habit.name}
-        </Text>
+        </View>
         {hasTracking && habit.tracking && (
           <ProgressIndicator
             progress={completion?.progress ?? 0}

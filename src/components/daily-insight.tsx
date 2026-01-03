@@ -30,6 +30,8 @@ ExpoImage.prefetch(HAPPY_CAT_SOURCE);
 type Props = {
   completedCount: number;
   totalCount: number;
+  currentStreak: number;
+  longestStreak: number;
 };
 
 function useUserName(): string | undefined {
@@ -188,9 +190,37 @@ function ProgressSection({
   );
 }
 
+type StreakRowProps = {
+  currentStreak: number;
+  longestStreak: number;
+};
+
+function StreakRow({
+  currentStreak,
+  longestStreak,
+}: StreakRowProps): React.ReactElement {
+  const streakLabel = currentStreak === 1 ? 'day streak' : 'day streak';
+
+  return (
+    <View className="mt-4 flex-row items-center justify-between border-t border-neutral-100 pt-4 dark:border-charcoal-700">
+      <View className="flex-row items-center">
+        <Text className="text-lg">🔥</Text>
+        <Text className="ml-1.5 font-poppins-semibold text-base text-neutral-800 dark:text-neutral-100">
+          {currentStreak} {streakLabel}
+        </Text>
+      </View>
+      <Text className="font-poppins text-sm text-neutral-500 dark:text-neutral-400">
+        Best: {longestStreak} days
+      </Text>
+    </View>
+  );
+}
+
 export function DailyInsight({
   completedCount,
   totalCount,
+  currentStreak,
+  longestStreak,
 }: Props): React.ReactElement {
   const userName = useUserName();
   const progress = totalCount > 0 ? completedCount / totalCount : 0;
@@ -218,6 +248,7 @@ export function DailyInsight({
         progressAnimatedStyle={progressAnimatedStyle}
         animatedPercentage={animatedPercentage}
       />
+      <StreakRow currentStreak={currentStreak} longestStreak={longestStreak} />
     </Animated.View>
   );
 }

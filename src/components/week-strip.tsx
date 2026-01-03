@@ -19,8 +19,13 @@ type DayInfo = {
   isCompleted: boolean;
 };
 
+function getLocalDateString(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
 function getWeekDays(): DayInfo[] {
   const today = new Date();
+  const todayStr = getLocalDateString(today);
   const days: DayInfo[] = [];
   const dayNames = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
   const startOfWeek = new Date(today);
@@ -29,12 +34,12 @@ function getWeekDays(): DayInfo[] {
   for (let i = 0; i < 7; i++) {
     const date = new Date(startOfWeek);
     date.setDate(startOfWeek.getDate() + i);
-    const fullDate = date.toISOString().split('T')[0];
+    const fullDate = getLocalDateString(date);
     days.push({
       dayName: dayNames[i],
       date: date.getDate(),
       fullDate,
-      isToday: fullDate === today.toISOString().split('T')[0],
+      isToday: fullDate === todayStr,
       isCompleted: false,
     });
   }
@@ -147,6 +152,9 @@ export function WeekStrip({
     const days = getWeekDays();
     return days.map((day) => {
       if (habits.length === 0) return { ...day, isCompleted: false };
+
+      // Check if all current habits are completed for this day
+      // This shows green dot for any day with all completions, even historical
       const allCompleted = habits.every((habit) => {
         const completion = completions.find(
           (c) => c.habitId === habit.id && c.date === day.fullDate
