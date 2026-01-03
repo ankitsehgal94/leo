@@ -2,6 +2,11 @@ import { create } from 'zustand';
 
 import type { DayOfWeek, Habit, HabitCompletion, TimeOfDay } from '@/types';
 
+import {
+  cancelHabitNotification,
+  cancelTodayHabitNotification,
+  scheduleHabitNotification,
+} from '../notifications';
 import { getItem, setItem } from '../storage';
 import { createSelectors } from '../utils';
 
@@ -232,6 +237,36 @@ function migrateHabits(
   });
 }
 
+// Helper: Schedule notifications for new habits
+function scheduleNotificationsForHabits(habits: Habit[]): void {
+  for (const habit of habits) {
+    if (habit.reminderEnabled && habit.reminderTime) {
+      void scheduleHabitNotification(habit, 0);
+    }
+  }
+}
+
+// Helper: Handle notification updates when habit reminder settings change
+function handleReminderUpdate(
+  updatedHabit: Habit,
+  existingHabit: Habit,
+  updates: Partial<Omit<Habit, 'id' | 'createdAt'>>
+): void {
+  const reminderChanged =
+    updates.reminderEnabled !== undefined ||
+    updates.reminderTime !== undefined ||
+    updates.frequency !== undefined ||
+    updates.selectedDays !== undefined;
+
+  if (reminderChanged) {
+    if (updatedHabit.reminderEnabled && updatedHabit.reminderTime) {
+      void scheduleHabitNotification(updatedHabit, existingHabit.currentStreak);
+    } else {
+      void cancelHabitNotification(updatedHabit.id);
+    }
+  }
+}
+
 // Store action creators
 function createHabitActions(set: StoreSet, get: StoreGet) {
   return {
@@ -260,6 +295,7 @@ function createHabitActions(set: StoreSet, get: StoreGet) {
       const habits = [...get().habits, newHabit];
       set({ habits });
       setItem(HABITS_KEY, habits);
+      scheduleNotificationsForHabits([newHabit]);
     },
 
     addMultipleHabits: (
@@ -272,17 +308,21 @@ function createHabitActions(set: StoreSet, get: StoreGet) {
       const habits = [...get().habits, ...newHabits];
       set({ habits });
       setItem(HABITS_KEY, habits);
+      scheduleNotificationsForHabits(newHabits);
     },
 
     updateHabit: (
       id: string,
       updates: Partial<Omit<Habit, 'id' | 'createdAt'>>
     ) => {
-      const habits = get().habits.map((h) =>
-        h.id === id ? { ...h, ...updates } : h
-      );
+      const existingHabit = get().habits.find((h) => h.id === id);
+      if (!existingHabit) return;
+
+      const updatedHabit = { ...existingHabit, ...updates };
+      const habits = get().habits.map((h) => (h.id === id ? updatedHabit : h));
       set({ habits });
       setItem(HABITS_KEY, habits);
+      handleReminderUpdate(updatedHabit, existingHabit, updates);
     },
 
     deleteHabit: (id: string) => {
@@ -291,6 +331,7 @@ function createHabitActions(set: StoreSet, get: StoreGet) {
       set({ habits, completions });
       setItem(HABITS_KEY, habits);
       setItem(COMPLETIONS_KEY, completions);
+      void cancelHabitNotification(id);
     },
   };
 }
@@ -309,6 +350,9 @@ function createCompletionActions(set: StoreSet, get: StoreGet) {
         ? toggleExistingCompletion(existing, get().completions)
         : [...get().completions, createNewCompletion(ctx)];
 
+      // Check if we're completing (not un-completing) the habit
+      const isCompleting = !existing || !existing.isComplete;
+
       // Update streak for this habit
       const updatedHabit = updateHabitStreak(habit, completions, getToday());
       const habits = get().habits.map((h) =>
@@ -318,8 +362,25 @@ function createCompletionActions(set: StoreSet, get: StoreGet) {
       set({ completions, habits });
       setItem(COMPLETIONS_KEY, completions);
       setItem(HABITS_KEY, habits);
+
+      // Cancel today's notification if completing the habit
+      if (isCompleting && date === getToday() && habit.reminderEnabled) {
+        void cancelTodayHabitNotification(habitId);
+      }
     },
   };
+}
+
+// Helper: Cancel notification if habit is completed today
+function cancelNotificationIfComplete(
+  habit: Habit,
+  ctx: ToggleContext & { progress: number }
+): void {
+  const goal = habit.tracking?.goal ?? 1;
+  const isNowComplete = ctx.progress >= goal;
+  if (isNowComplete && ctx.date === getToday() && habit.reminderEnabled) {
+    void cancelTodayHabitNotification(ctx.habitId);
+  }
 }
 
 function createProgressActions(set: StoreSet, get: StoreGet) {
@@ -342,6 +403,7 @@ function createProgressActions(set: StoreSet, get: StoreGet) {
     set({ completions: updatedCompletions, habits });
     setItem(COMPLETIONS_KEY, updatedCompletions);
     setItem(HABITS_KEY, habits);
+    cancelNotificationIfComplete(habit, ctx);
   }
 
   return {

@@ -18,6 +18,7 @@ import { ReminderPicker } from '@/components/reminder-picker';
 import { FocusAwareStatusBar, SafeAreaView, Text, View } from '@/components/ui';
 import { ArrowLeft } from '@/components/ui/icons';
 import { cn } from '@/lib';
+import { requestNotificationPermissions } from '@/lib/notifications';
 import { useHabitStore, useUserStore } from '@/lib/stores';
 import type { DayOfWeek, Frequency, TimeOfDay, TrackingConfig } from '@/types';
 import { ALL_DAYS, deriveTimeOfDay, suggestTracking } from '@/types';
@@ -218,6 +219,23 @@ function HabitFormSections({
 }: {
   form: HabitFormState;
 }): React.ReactElement {
+  const handleReminderEnabledChange = async (
+    enabled: boolean
+  ): Promise<void> => {
+    if (enabled) {
+      const granted = await requestNotificationPermissions();
+      if (!granted) {
+        Alert.alert(
+          'Notifications Required',
+          'Please enable notifications in Settings to receive habit reminders.',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+    }
+    form.setReminderEnabled(enabled);
+  };
+
   return (
     <View className="px-4">
       {/* Daily Target */}
@@ -250,7 +268,9 @@ function HabitFormSections({
           enabled={form.reminderEnabled}
           time={form.reminderTime}
           timeOfDay={form.timeOfDay}
-          onEnabledChange={form.setReminderEnabled}
+          onEnabledChange={(enabled) =>
+            void handleReminderEnabledChange(enabled)
+          }
           onTimeChange={form.setReminderTime}
           onTimeOfDayChange={form.setTimeOfDay}
         />

@@ -79,7 +79,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     ],
     'expo-localization',
     'expo-router',
-    ...(Env.APP_ENV === 'production' ? ['expo-notifications'] : []),
+    'expo-notifications',
     ['app-icon-badge', appIconBadgeConfig],
     ['react-native-edge-to-edge'],
     '@bacons/apple-targets',

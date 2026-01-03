@@ -3,7 +3,7 @@ import '../../global.css';
 
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { ThemeProvider } from '@react-navigation/native';
-import { Stack } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import React from 'react';
 import { StyleSheet } from 'react-native';
@@ -19,6 +19,7 @@ import {
   loadSelectedTheme,
   useFonts,
 } from '@/lib';
+import { addNotificationResponseReceivedListener } from '@/lib/notifications';
 import { useThemeConfig } from '@/lib/use-theme-config';
 
 export { ErrorBoundary } from 'expo-router';
@@ -41,6 +42,7 @@ SplashScreen.setOptions({
 
 export default function RootLayout() {
   const fontsLoaded = useFonts();
+  const router = useRouter();
 
   // Keep splash screen visible until fonts are loaded
   React.useEffect(() => {
@@ -48,6 +50,20 @@ export default function RootLayout() {
       // Fonts are loaded, splash screen will be hidden by the app layout
     }
   }, [fontsLoaded]);
+
+  // Handle notification taps - navigate to habit detail
+  React.useEffect(() => {
+    const subscription = addNotificationResponseReceivedListener((response) => {
+      const habitId = response.notification.request.content.data?.habitId as
+        | string
+        | undefined;
+      if (habitId) {
+        router.push(`/habit/${habitId}`);
+      }
+    });
+
+    return () => subscription.remove();
+  }, [router]);
 
   if (!fontsLoaded) {
     return null;
