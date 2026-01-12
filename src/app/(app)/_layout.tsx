@@ -1,75 +1,125 @@
-/* eslint-disable react/no-unstable-nested-components */
-import { Link, Redirect, SplashScreen, Tabs } from 'expo-router';
+import { Redirect, SplashScreen, Tabs } from 'expo-router';
+import { useColorScheme } from 'nativewind';
 import React, { useCallback, useEffect } from 'react';
 
-import { Pressable, Text } from '@/components/ui';
+import { FloatingAddButton } from '@/components/floating-add-button';
+import { View } from '@/components/ui';
+import colors from '@/components/ui/colors';
 import {
-  Feed as FeedIcon,
-  Settings as SettingsIcon,
-  Style as StyleIcon,
+  Analytics as AnalyticsIcon,
+  Discover as DiscoverIcon,
+  Home as HomeIcon,
+  Journal as JournalIcon,
+  User as UserIcon,
 } from '@/components/ui/icons';
-import { useAuth, useIsFirstTime } from '@/lib';
+import { useIsFirstTime, useWidgetSync } from '@/lib';
 
-export default function TabLayout() {
-  const status = useAuth.use.status();
-  const [isFirstTime] = useIsFirstTime();
+function getTabBarStyle(isDark: boolean) {
+  return {
+    backgroundColor: isDark ? colors.charcoal[950] : '#FFFFFF',
+    borderTopWidth: 0,
+    paddingTop: 8,
+    height: 88,
+    elevation: 0,
+    shadowOpacity: 0,
+  };
+}
+
+const TAB_BAR_LABEL_STYLE = {
+  fontSize: 11,
+  fontWeight: '500' as const,
+};
+
+function useSplashScreen() {
   const hideSplash = useCallback(async () => {
     await SplashScreen.hideAsync();
   }, []);
+
   useEffect(() => {
-    if (status !== 'idle') {
-      setTimeout(() => {
-        hideSplash();
-      }, 1000);
-    }
-  }, [hideSplash, status]);
+    setTimeout(() => {
+      hideSplash();
+    }, 1000);
+  }, [hideSplash]);
+}
+
+function TabScreens(): React.ReactElement {
+  const { colorScheme } = useColorScheme();
+  const isDark = colorScheme === 'dark';
+
+  return (
+    <View className="flex-1">
+      <Tabs
+        screenOptions={{
+          tabBarStyle: getTabBarStyle(isDark),
+          tabBarActiveTintColor: colors.primary[500],
+          tabBarInactiveTintColor: isDark ? colors.charcoal[500] : '#9CA3AF',
+          tabBarLabelStyle: TAB_BAR_LABEL_STYLE,
+        }}
+      >
+        <Tabs.Screen
+          name="index"
+          options={{
+            title: 'Home',
+            headerShown: false,
+            tabBarIcon: ({ color }) => <HomeIcon color={color} />,
+            tabBarButtonTestID: 'today-tab',
+          }}
+        />
+        <Tabs.Screen
+          name="journal"
+          options={{
+            title: 'Journal',
+            headerShown: false,
+            tabBarIcon: ({ color }) => <JournalIcon color={color} />,
+            tabBarButtonTestID: 'journal-tab',
+          }}
+        />
+        <Tabs.Screen
+          name="discover"
+          options={{
+            title: 'Discover',
+            headerShown: false,
+            tabBarIcon: ({ color }) => <DiscoverIcon color={color} />,
+            tabBarButtonTestID: 'discover-tab',
+          }}
+        />
+        <Tabs.Screen
+          name="analytics"
+          options={{
+            title: 'Analytics',
+            headerShown: false,
+            tabBarIcon: ({ color }) => <AnalyticsIcon color={color} />,
+            tabBarButtonTestID: 'analytics-tab',
+          }}
+        />
+        <Tabs.Screen
+          name="profile"
+          options={{
+            title: 'Settings',
+            headerShown: false,
+            tabBarIcon: ({ color }) => <UserIcon color={color} />,
+            tabBarButtonTestID: 'profile-tab',
+          }}
+        />
+        {/* Hidden screens */}
+        <Tabs.Screen name="add" options={{ href: null }} />
+        <Tabs.Screen name="settings" options={{ href: null }} />
+      </Tabs>
+      <FloatingAddButton />
+    </View>
+  );
+}
+
+export default function TabLayout(): React.ReactElement {
+  const [isFirstTime] = useIsFirstTime();
+  useSplashScreen();
+
+  // Sync habit data with iOS widgets
+  useWidgetSync();
 
   if (isFirstTime) {
     return <Redirect href="/onboarding" />;
   }
-  if (status === 'signOut') {
-    return <Redirect href="/login" />;
-  }
-  return (
-    <Tabs>
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: 'Feed',
-          tabBarIcon: ({ color }) => <FeedIcon color={color} />,
-          headerRight: () => <CreateNewPostLink />,
-          tabBarButtonTestID: 'feed-tab',
-        }}
-      />
 
-      <Tabs.Screen
-        name="style"
-        options={{
-          title: 'Style',
-          headerShown: false,
-          tabBarIcon: ({ color }) => <StyleIcon color={color} />,
-          tabBarButtonTestID: 'style-tab',
-        }}
-      />
-      <Tabs.Screen
-        name="settings"
-        options={{
-          title: 'Settings',
-          headerShown: false,
-          tabBarIcon: ({ color }) => <SettingsIcon color={color} />,
-          tabBarButtonTestID: 'settings-tab',
-        }}
-      />
-    </Tabs>
-  );
+  return <TabScreens />;
 }
-
-const CreateNewPostLink = () => {
-  return (
-    <Link href="/feed/add-post" asChild>
-      <Pressable>
-        <Text className="px-3 text-primary-300">Create</Text>
-      </Pressable>
-    </Link>
-  );
-};

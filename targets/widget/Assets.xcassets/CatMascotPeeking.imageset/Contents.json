@@ -1,0 +1,23 @@
+{
+  "images": [
+    {
+      "filename": "catmascot_peeking.png",
+      "idiom": "universal",
+      "scale": "1x"
+    },
+    {
+      "filename": "catmascot_peeking@2x.png",
+      "idiom": "universal",
+      "scale": "2x"
+    },
+    {
+      "filename": "catmascot_peeking@3x.png",
+      "idiom": "universal",
+      "scale": "3x"
+    }
+  ],
+  "info": {
+    "author": "xcode",
+    "version": 1
+  }
+}
