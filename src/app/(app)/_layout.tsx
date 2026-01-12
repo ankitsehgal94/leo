@@ -6,6 +6,7 @@ import { FloatingAddButton } from '@/components/floating-add-button';
 import { View } from '@/components/ui';
 import colors from '@/components/ui/colors';
 import {
+  Analytics as AnalyticsIcon,
   Discover as DiscoverIcon,
   Home as HomeIcon,
   Journal as JournalIcon,
@@ -80,6 +81,15 @@ function TabScreens(): React.ReactElement {
             headerShown: false,
             tabBarIcon: ({ color }) => <DiscoverIcon color={color} />,
             tabBarButtonTestID: 'discover-tab',
+          }}
+        />
+        <Tabs.Screen
+          name="analytics"
+          options={{
+            title: 'Analytics',
+            headerShown: false,
+            tabBarIcon: ({ color }) => <AnalyticsIcon color={color} />,
+            tabBarButtonTestID: 'analytics-tab',
           }}
         />
         <Tabs.Screen

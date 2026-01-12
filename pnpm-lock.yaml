@@ -134,6 +134,9 @@ importers:
       react-native-gesture-handler:
         specifier: ~2.24.0
         version: 2.24.0(react-native@0.79.4(@babel/core@7.26.0)(@types/react@19.0.14)(react@19.0.0))(react@19.0.0)
+      react-native-gifted-charts:
+        specifier: ^1.4.70
+        version: 1.4.70(expo-linear-gradient@15.0.8(expo@53.0.12(@babel/core@7.26.0)(@expo/metro-runtime@5.0.4(react-native@0.79.4(@babel/core@7.26.0)(@types/react@19.0.14)(react@19.0.0)))(react-native@0.79.4(@babel/core@7.26.0)(@types/react@19.0.14)(react@19.0.0))(react@19.0.0))(react-native@0.79.4(@babel/core@7.26.0)(@types/react@19.0.14)(react@19.0.0))(react@19.0.0))(react-native-svg@15.11.2(react-native@0.79.4(@babel/core@7.26.0)(@types/react@19.0.14)(react@19.0.0))(react@19.0.0))(react-native@0.79.4(@babel/core@7.26.0)(@types/react@19.0.14)(react@19.0.0))(react@19.0.0)
       react-native-keyboard-controller:
         specifier: ^1.17.4
         version: 1.17.4(react-native-reanimated@3.17.5(@babel/core@7.26.0)(react-native@0.79.4(@babel/core@7.26.0)(@types/react@19.0.14)(react@19.0.0))(react@19.0.0))(react-native@0.79.4(@babel/core@7.26.0)(@types/react@19.0.14)(react@19.0.0))(react@19.0.0)
@@ -3876,6 +3879,13 @@ packages:
     resolution: {integrity: sha512-VilgtJj/ALgGY77fiLam5iD336eSWi96Q15JSAG1zi8NRBysm3LXKdGnHb4m5cuyxvOLQQKWpBZAT6ni4FI2iQ==}
     engines: {node: '>=6'}
 
+  gifted-charts-core@0.1.72:
+    resolution: {integrity: sha512-ID98gSvYA/6Egg/SxjjVAnFMpK0c4H9NZKkF4vRWtvJOioWegEGlQKN7BcQhuyKHr/HPmz7kGID3XJUuoM7UTQ==}
+    peerDependencies:
+      react: '*'
+      react-native: '*'
+      react-native-svg: '*'
+
   gifwrap@0.10.1:
     resolution: {integrity: sha512-2760b1vpJHNmLzZ/ubTtNnEx5WApN/PYWJvXvgS+tL1egTTthayFYIQQNi136FLEDcN/IyEY2EcGpIITD6eYUw==}
 
@@ -5908,6 +5918,20 @@ packages:
     peerDependencies:
       react: '*'
       react-native: '*'
+
+  react-native-gifted-charts@1.4.70:
+    resolution: {integrity: sha512-nsbth3aMeMwu40ZNAn512TGZLks5Untplby5ABSe22+FLUdXYkdCzeR5/CodL6gxCcpsqQYXgAVvtujZnDRErA==}
+    peerDependencies:
+      expo-linear-gradient: '*'
+      react: '*'
+      react-native: '*'
+      react-native-linear-gradient: '*'
+      react-native-svg: '*'
+    peerDependenciesMeta:
+      expo-linear-gradient:
+        optional: true
+      react-native-linear-gradient:
+        optional: true
 
   react-native-iphone-screen-helper@2.1.2:
     resolution: {integrity: sha512-xczoNSb582bPW9na9f5ASlJ19vn/JBJ/jPzZ8f+u06F3tCa23dOIml7d4tHmbHdmVaWqf6tgRc95+tyavWg4Fw==}
@@ -12012,6 +12036,12 @@ snapshots:
 
   getenv@2.0.0: {}
 
+  gifted-charts-core@0.1.72(react-native-svg@15.11.2(react-native@0.79.4(@babel/core@7.26.0)(@types/react@19.0.14)(react@19.0.0))(react@19.0.0))(react-native@0.79.4(@babel/core@7.26.0)(@types/react@19.0.14)(react@19.0.0))(react@19.0.0):
+    dependencies:
+      react: 19.0.0
+      react-native: 0.79.4(@babel/core@7.26.0)(@types/react@19.0.14)(react@19.0.0)
+      react-native-svg: 15.11.2(react-native@0.79.4(@babel/core@7.26.0)(@types/react@19.0.14)(react@19.0.0))(react@19.0.0)
+
   gifwrap@0.10.1:
     dependencies:
       image-q: 4.0.0
@@ -14404,6 +14434,15 @@ snapshots:
       invariant: 2.2.4
       react: 19.0.0
       react-native: 0.79.4(@babel/core@7.26.0)(@types/react@19.0.14)(react@19.0.0)
+
+  react-native-gifted-charts@1.4.70(expo-linear-gradient@15.0.8(expo@53.0.12(@babel/core@7.26.0)(@expo/metro-runtime@5.0.4(react-native@0.79.4(@babel/core@7.26.0)(@types/react@19.0.14)(react@19.0.0)))(react-native@0.79.4(@babel/core@7.26.0)(@types/react@19.0.14)(react@19.0.0))(react@19.0.0))(react-native@0.79.4(@babel/core@7.26.0)(@types/react@19.0.14)(react@19.0.0))(react@19.0.0))(react-native-svg@15.11.2(react-native@0.79.4(@babel/core@7.26.0)(@types/react@19.0.14)(react@19.0.0))(react@19.0.0))(react-native@0.79.4(@babel/core@7.26.0)(@types/react@19.0.14)(react@19.0.0))(react@19.0.0):
+    dependencies:
+      gifted-charts-core: 0.1.72(react-native-svg@15.11.2(react-native@0.79.4(@babel/core@7.26.0)(@types/react@19.0.14)(react@19.0.0))(react@19.0.0))(react-native@0.79.4(@babel/core@7.26.0)(@types/react@19.0.14)(react@19.0.0))(react@19.0.0)
+      react: 19.0.0
+      react-native: 0.79.4(@babel/core@7.26.0)(@types/react@19.0.14)(react@19.0.0)
+      react-native-svg: 15.11.2(react-native@0.79.4(@babel/core@7.26.0)(@types/react@19.0.14)(react@19.0.0))(react@19.0.0)
+    optionalDependencies:
+      expo-linear-gradient: 15.0.8(expo@53.0.12(@babel/core@7.26.0)(@expo/metro-runtime@5.0.4(react-native@0.79.4(@babel/core@7.26.0)(@types/react@19.0.14)(react@19.0.0)))(react-native@0.79.4(@babel/core@7.26.0)(@types/react@19.0.14)(react@19.0.0))(react@19.0.0))(react-native@0.79.4(@babel/core@7.26.0)(@types/react@19.0.14)(react@19.0.0))(react@19.0.0)
 
   react-native-iphone-screen-helper@2.1.2(react-native@0.79.4(@babel/core@7.26.0)(@types/react@19.0.14)(react@19.0.0)):
     dependencies:
